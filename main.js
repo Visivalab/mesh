@@ -1,12 +1,10 @@
-console.log("Holaa");
-
 import * as THREE from 'three';
 
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { GUI } from 'three/examples/jsm/libs/dat.gui.module.js';
 
-let renderer, scene, camera;
+let renderer, scene, camera, controls;
 
 init();
 
@@ -63,13 +61,6 @@ function createGui() {
 
 }
 
-function createScene(){
-
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color( 0xbfe3dd );
-
-}
-
 function createCamera(){
     
     camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 10000 );
@@ -100,10 +91,16 @@ function createLights(){
 
 }
 
+function setControls(){
+    controls = new OrbitControls( camera, renderer.domElement );
+    controls.addEventListener( 'change', render );
+    controls.minDistance = 10;
+    controls.maxDistance = 5000;
+    controls.enablePan = false;
+}
 
-function init() {
-
-    // renderer
+function createRenderer(){
+    
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setPixelRatio( window.devicePixelRatio );
     renderer.setSize( window.innerWidth, window.innerHeight );
@@ -112,26 +109,13 @@ function init() {
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1;
     renderer.outputEncoding = THREE.sRGBEncoding;
-                
 
     document.body.appendChild( renderer.domElement );
 
-    createGui();
-    createScene();
-    createCamera();
-    createLights();
+}
 
+function loadMeshes(){
 
-    // controls
-    const controls = new OrbitControls( camera, renderer.domElement );
-    controls.addEventListener( 'change', render );
-    controls.minDistance = 10;
-    controls.maxDistance = 5000;
-    controls.enablePan = false;
-
-   
-
-    // model
     const loader = new GLTFLoader().setPath('./models/');
 
     loader.load('test.gltf', function(test){
@@ -141,6 +125,7 @@ function init() {
             child.layers.set( 2 )
             scene.add(child)
         })
+        render();
     })
 
     loader.load('test2.gltf', function(test){
@@ -151,6 +136,7 @@ function init() {
             child.layers.set( 1 )
             scene.add(child)
         })
+        render();
     })
 
     loader.load('gltf/full_mesh.glb', function(full_packed){
@@ -161,18 +147,34 @@ function init() {
             scene.add(child)
         })
     })
+}
+
+function init() {
+
+    //Crear la escena con su background bien bonito
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color( 0xbfe3dd );
+
+    createCamera();
+    createLights();
+    createRenderer();
+    createGui();
+    setControls();
+  
+    loadMeshes();
 
     render();
-
+    
     window.addEventListener( 'resize', onWindowResize, false );
 
 }
 
 function onWindowResize() {
 
-    renderer.setSize( window.innerWidth, window.innerHeight );
+    renderer.setSize( window.innerWidth, window.innerHeight ); // Actualiza el tamaño del visor
 
-    camera.aspect = window.innerWidth / window.innerHeight;
+    // Actualiza el tamaño de la camara, sino los elementos se estiran y se chafan
+    camera.aspect = window.innerWidth / window.innerHeight; 
     camera.updateProjectionMatrix();
 
     render();
