@@ -49719,172 +49719,6 @@ var GLTFLoader = ( function () {
 
 } )();
 
-var Stats = function () {
-
-	var mode = 0;
-
-	var container = document.createElement( 'div' );
-	container.style.cssText = 'position:fixed;top:0;left:0;cursor:pointer;opacity:0.9;z-index:10000';
-	container.addEventListener( 'click', function ( event ) {
-
-		event.preventDefault();
-		showPanel( ++ mode % container.children.length );
-
-	}, false );
-
-	//
-
-	function addPanel( panel ) {
-
-		container.appendChild( panel.dom );
-		return panel;
-
-	}
-
-	function showPanel( id ) {
-
-		for ( var i = 0; i < container.children.length; i ++ ) {
-
-			container.children[ i ].style.display = i === id ? 'block' : 'none';
-
-		}
-
-		mode = id;
-
-	}
-
-	//
-
-	var beginTime = ( performance || Date ).now(), prevTime = beginTime, frames = 0;
-
-	var fpsPanel = addPanel( new Stats.Panel( 'FPS', '#0ff', '#002' ) );
-	var msPanel = addPanel( new Stats.Panel( 'MS', '#0f0', '#020' ) );
-
-	if ( self.performance && self.performance.memory ) {
-
-		var memPanel = addPanel( new Stats.Panel( 'MB', '#f08', '#201' ) );
-
-	}
-
-	showPanel( 0 );
-
-	return {
-
-		REVISION: 16,
-
-		dom: container,
-
-		addPanel: addPanel,
-		showPanel: showPanel,
-
-		begin: function () {
-
-			beginTime = ( performance || Date ).now();
-
-		},
-
-		end: function () {
-
-			frames ++;
-
-			var time = ( performance || Date ).now();
-
-			msPanel.update( time - beginTime, 200 );
-
-			if ( time >= prevTime + 1000 ) {
-
-				fpsPanel.update( ( frames * 1000 ) / ( time - prevTime ), 100 );
-
-				prevTime = time;
-				frames = 0;
-
-				if ( memPanel ) {
-
-					var memory = performance.memory;
-					memPanel.update( memory.usedJSHeapSize / 1048576, memory.jsHeapSizeLimit / 1048576 );
-
-				}
-
-			}
-
-			return time;
-
-		},
-
-		update: function () {
-
-			beginTime = this.end();
-
-		},
-
-		// Backwards Compatibility
-
-		domElement: container,
-		setMode: showPanel
-
-	};
-
-};
-
-Stats.Panel = function ( name, fg, bg ) {
-
-	var min = Infinity, max = 0, round = Math.round;
-	var PR = round( window.devicePixelRatio || 1 );
-
-	var WIDTH = 80 * PR, HEIGHT = 48 * PR,
-		TEXT_X = 3 * PR, TEXT_Y = 2 * PR,
-		GRAPH_X = 3 * PR, GRAPH_Y = 15 * PR,
-		GRAPH_WIDTH = 74 * PR, GRAPH_HEIGHT = 30 * PR;
-
-	var canvas = document.createElement( 'canvas' );
-	canvas.width = WIDTH;
-	canvas.height = HEIGHT;
-	canvas.style.cssText = 'width:80px;height:48px';
-
-	var context = canvas.getContext( '2d' );
-	context.font = 'bold ' + ( 9 * PR ) + 'px Helvetica,Arial,sans-serif';
-	context.textBaseline = 'top';
-
-	context.fillStyle = bg;
-	context.fillRect( 0, 0, WIDTH, HEIGHT );
-
-	context.fillStyle = fg;
-	context.fillText( name, TEXT_X, TEXT_Y );
-	context.fillRect( GRAPH_X, GRAPH_Y, GRAPH_WIDTH, GRAPH_HEIGHT );
-
-	context.fillStyle = bg;
-	context.globalAlpha = 0.9;
-	context.fillRect( GRAPH_X, GRAPH_Y, GRAPH_WIDTH, GRAPH_HEIGHT );
-
-	return {
-
-		dom: canvas,
-
-		update: function ( value, maxValue ) {
-
-			min = Math.min( min, value );
-			max = Math.max( max, value );
-
-			context.fillStyle = bg;
-			context.globalAlpha = 1;
-			context.fillRect( 0, 0, WIDTH, GRAPH_Y );
-			context.fillStyle = fg;
-			context.fillText( round( value ) + ' ' + name + ' (' + round( min ) + '-' + round( max ) + ')', TEXT_X, TEXT_Y );
-
-			context.drawImage( canvas, GRAPH_X + PR, GRAPH_Y, GRAPH_WIDTH - PR, GRAPH_HEIGHT, GRAPH_X, GRAPH_Y, GRAPH_WIDTH - PR, GRAPH_HEIGHT );
-
-			context.fillRect( GRAPH_X + GRAPH_WIDTH - PR, GRAPH_Y, PR, GRAPH_HEIGHT );
-
-			context.fillStyle = bg;
-			context.globalAlpha = 0.9;
-			context.fillRect( GRAPH_X + GRAPH_WIDTH - PR, GRAPH_Y, PR, round( ( 1 - ( value / maxValue ) ) * GRAPH_HEIGHT ) );
-
-		}
-
-	};
-
-};
-
 /**
  * dat-gui JavaScript Controller Library
  * http://code.google.com/p/dat-gui
@@ -53434,62 +53268,121 @@ var GUI$1 = GUI;
 
 console.log("Holaa");
 
-let stats;
 let renderer, scene, camera;
 
 init();
 
-function init() {
+function createGui() {
 
-    // renderer
-    renderer = new WebGLRenderer();
-    renderer.setPixelRatio( window.devicePixelRatio );
-    renderer.setSize( window.innerWidth, window.innerHeight );
-    document.body.appendChild( renderer.domElement );
+    // Crear el GUI
+    const gui = new GUI$1();
+    gui.domElement.id = 'gui';
 
-    stats = new Stats();
-    document.body.appendChild( stats.dom );
-
+    // Definir las capas y sus funcionalidades
     const layers = {
-        'toggle red': function () {
+        layer_0: function () {
             camera.layers.toggle( 0 );
+            render();
         },
-        'toggle green': function () {
+        layer_1: function () {
             camera.layers.toggle( 1 );
+            render();
         },
-        'toggle blue': function () {
+        layer_2: function () {
             camera.layers.toggle( 2 );
+            render();
         },
-        'enable all': function () {
+        all: function () {
             camera.layers.enableAll();
+            render();
         },
-        'disable all': function () {
+        none: function () {
             camera.layers.disableAll();
+            render();
+        },
+        sunlight: function (){
+            camera.layers.toggle(3);
+            render();
         }
     };
 
-    // Init gui
-    const gui = new GUI$1();
-    gui.add( layers, 'toggle red' );
-    gui.add( layers, 'toggle green' );
-    gui.add( layers, 'toggle blue' );
-    gui.add( layers, 'enable all' );
-    gui.add( layers, 'disable all' );
+    // Crear estructura de carpetas y linkar cada layer a su funcionalidad
+    let folder__layers = gui.addFolder('Layers');
+    let folder__lights = gui.addFolder('Lights');
 
-    renderer.outputEncoding = sRGBEncoding;
+    folder__layers.add(layers,'layer_0')
+        .name('Base layer');
+    folder__layers.add(layers,'layer_1')
+        .name('Layer 1');
+    folder__layers.add(layers,'layer_2')
+        .name('Layer 2');
+    folder__layers.add(layers,'all')
+        .name('Enable all');
+    folder__layers.add(layers,'none')
+        .name('Disable all');
+    folder__lights.add(layers, 'sunlight')
+        .name('Sunlight');
 
-    // scene
+}
+
+function createScene(){
+
     scene = new Scene();
     scene.background = new Color( 0xbfe3dd );
 
-    // camera
+}
+
+function createCamera(){
+    
     camera = new PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 10000 );
     camera.position.set( - 10, 0, 23 );
+    
+    // Ponemos la camara en cada layer
     camera.layers.enable( 0 );
     camera.layers.enable( 1 );
     camera.layers.enable( 2 );
+    camera.layers.enable( 3 );
 
     scene.add( camera );
+
+}
+
+function createLights(){
+
+    // ambient light
+    const ambient = new AmbientLight( 0xfcba43, .2 );
+    ambient.layers.set( 3 );
+
+    // point light
+    const sunlight = new PointLight( 0xffffff, 1.5 );
+    sunlight.layers.set( 3 ); //Set hace que se ponga en esta capa y se quite de todas las demás. Enable hace que se ponga en la capa, si está en otra seguirá en la otra tambien
+
+    scene.add( ambient );
+    camera.add( sunlight ); // Esta luz sale de la camara
+
+}
+
+
+function init() {
+
+    // renderer
+    renderer = new WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio( window.devicePixelRatio );
+    renderer.setSize( window.innerWidth, window.innerHeight );
+
+    //Esto y el antialias le da a saco de calidad al render, pero no sé exactamente como
+    renderer.toneMapping = ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1;
+    renderer.outputEncoding = sRGBEncoding;
+                
+
+    document.body.appendChild( renderer.domElement );
+
+    createGui();
+    createScene();
+    createCamera();
+    createLights();
+
 
     // controls
     const controls = new OrbitControls( camera, renderer.domElement );
@@ -53498,23 +53391,37 @@ function init() {
     controls.maxDistance = 5000;
     controls.enablePan = false;
 
-    // ambient
-    scene.add( new AmbientLight( 0xfcba43, .2 ) );
-
-    // light
-    const light = new PointLight( 0xffffff, 1.5 );
-    light.layers.enable( 0 );
-    light.layers.enable( 1 );
-    light.layers.enable( 2 );
-
-    camera.add( light );
+   
 
     // model
-    const loader = new GLTFLoader().setPath('./models/gltf/');
-    loader.load('full_mesh.glb', function(glb){
+    const loader = new GLTFLoader().setPath('./models/');
+
+    loader.load('test.gltf', function(test){
+        console.log("Added test mesh");
+        console.log(test.scene);
+        test.scene.traverse( function(child) {
+            child.layers.set( 2 );
+            scene.add(child);
+        });
+    });
+
+    loader.load('test2.gltf', function(test){
+        console.log("Added test2 mesh");
+        console.log(test.scene);
+        //Un gltf tiene una escena con hijos, que son los elementos 3d. Cada uno de estos tambien puede tener hijos. Como un arbol de 3ds. traverse recorre todos estos hijos
+        test.scene.traverse( function(child) {
+            child.layers.set( 1 );
+            scene.add(child);
+        });
+    });
+
+    loader.load('gltf/full_mesh.glb', function(full_packed){
         console.log("Added full_mesh");
-        console.log(glb.scene);
-        scene.add(glb.scene);
+        console.log(full_packed.scene);
+        full_packed.scene.traverse( function(child) {
+            child.layers.set( 0 );
+            scene.add(child);
+        });
     });
 
     render();

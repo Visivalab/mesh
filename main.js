@@ -4,65 +4,123 @@ import * as THREE from 'three';
 
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import Stats from 'three/examples/jsm/libs/stats.module.js';
 import { GUI } from 'three/examples/jsm/libs/dat.gui.module.js';
 
-let stats;
 let renderer, scene, camera;
 
 init();
 
-function init() {
+function createGui() {
 
-    // renderer
-    renderer = new THREE.WebGLRenderer();
-    renderer.setPixelRatio( window.devicePixelRatio );
-    renderer.setSize( window.innerWidth, window.innerHeight );
-    document.body.appendChild( renderer.domElement );
+    // Crear el GUI
+    const gui = new GUI();
+    gui.domElement.id = 'gui';
 
-    stats = new Stats();
-    document.body.appendChild( stats.dom );
-
+    // Definir las capas y sus funcionalidades
     const layers = {
-        'toggle red': function () {
+        layer_0: function () {
             camera.layers.toggle( 0 );
+            render();
         },
-        'toggle green': function () {
+        layer_1: function () {
             camera.layers.toggle( 1 );
+            render();
         },
-        'toggle blue': function () {
+        layer_2: function () {
             camera.layers.toggle( 2 );
+            render();
         },
-        'enable all': function () {
+        all: function () {
             camera.layers.enableAll();
+            render();
         },
-        'disable all': function () {
+        none: function () {
             camera.layers.disableAll();
+            render();
+        },
+        sunlight: function (){
+            camera.layers.toggle(3);
+            render();
         }
     };
 
-    // Init gui
-    const gui = new GUI();
-    gui.add( layers, 'toggle red' );
-    gui.add( layers, 'toggle green' );
-    gui.add( layers, 'toggle blue' );
-    gui.add( layers, 'enable all' );
-    gui.add( layers, 'disable all' );
+    // Crear estructura de carpetas y linkar cada layer a su funcionalidad
+    let folder__layers = gui.addFolder('Layers');
+    let folder__lights = gui.addFolder('Lights');
 
-    renderer.outputEncoding = THREE.sRGBEncoding;
+    folder__layers.add(layers,'layer_0')
+        .name('Base layer');
+    folder__layers.add(layers,'layer_1')
+        .name('Layer 1');
+    folder__layers.add(layers,'layer_2')
+        .name('Layer 2');
+    folder__layers.add(layers,'all')
+        .name('Enable all');
+    folder__layers.add(layers,'none')
+        .name('Disable all');
+    folder__lights.add(layers, 'sunlight')
+        .name('Sunlight');
 
-    // scene
+}
+
+function createScene(){
+
     scene = new THREE.Scene();
     scene.background = new THREE.Color( 0xbfe3dd );
 
-    // camera
+}
+
+function createCamera(){
+    
     camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 10000 );
     camera.position.set( - 10, 0, 23 );
+    
+    // Ponemos la camara en cada layer
     camera.layers.enable( 0 );
     camera.layers.enable( 1 );
     camera.layers.enable( 2 );
+    camera.layers.enable( 3 );
 
     scene.add( camera );
+
+}
+
+function createLights(){
+
+    // ambient light
+    const ambient = new THREE.AmbientLight( 0xfcba43, .2 );
+    ambient.layers.set( 3 );
+
+    // point light
+    const sunlight = new THREE.PointLight( 0xffffff, 1.5 );
+    sunlight.layers.set( 3 ); //Set hace que se ponga en esta capa y se quite de todas las demás. Enable hace que se ponga en la capa, si está en otra seguirá en la otra tambien
+
+    scene.add( ambient );
+    camera.add( sunlight ); // Esta luz sale de la camara
+
+}
+
+
+function init() {
+
+    // renderer
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio( window.devicePixelRatio );
+    renderer.setSize( window.innerWidth, window.innerHeight );
+
+    //Esto y el antialias le da a saco de calidad al render, pero no sé exactamente como
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1;
+    renderer.outputEncoding = THREE.sRGBEncoding;
+                
+
+    document.body.appendChild( renderer.domElement );
+
+    createGui();
+    createScene();
+    createCamera();
+    createLights();
+
 
     // controls
     const controls = new OrbitControls( camera, renderer.domElement );
@@ -71,23 +129,37 @@ function init() {
     controls.maxDistance = 5000;
     controls.enablePan = false;
 
-    // ambient
-    scene.add( new THREE.AmbientLight( 0xfcba43, .2 ) );
-
-    // light
-    const light = new THREE.PointLight( 0xffffff, 1.5 );
-    light.layers.enable( 0 );
-    light.layers.enable( 1 );
-    light.layers.enable( 2 );
-
-    camera.add( light );
+   
 
     // model
-    const loader = new GLTFLoader().setPath('./models/gltf/');
-    loader.load('full_mesh.glb', function(glb){
+    const loader = new GLTFLoader().setPath('./models/');
+
+    loader.load('test.gltf', function(test){
+        console.log("Added test mesh")
+        console.log(test.scene)
+        test.scene.traverse( function(child) {
+            child.layers.set( 2 )
+            scene.add(child)
+        })
+    })
+
+    loader.load('test2.gltf', function(test){
+        console.log("Added test2 mesh")
+        console.log(test.scene)
+        //Un gltf tiene una escena con hijos, que son los elementos 3d. Cada uno de estos tambien puede tener hijos. Como un arbol de 3ds. traverse recorre todos estos hijos
+        test.scene.traverse( function(child) {
+            child.layers.set( 1 )
+            scene.add(child)
+        })
+    })
+
+    loader.load('gltf/full_mesh.glb', function(full_packed){
         console.log("Added full_mesh")
-        console.log(glb.scene)
-        scene.add(glb.scene)
+        console.log(full_packed.scene)
+        full_packed.scene.traverse( function(child) {
+            child.layers.set( 0 )
+            scene.add(child)
+        })
     })
 
     render();
