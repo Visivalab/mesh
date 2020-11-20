@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import * as THREE from 'three'; // https://threejs.org/docs/#api/en/loaders/Loader
 
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -65,7 +65,7 @@ function createGui() {
 function createCamera(){
     
     camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 10000 );
-    camera.position.set( - 10, 0, 23 );
+    camera.position.set( - 1000, 1000, 1000 );
     
     // Ponemos la camara en cada layer
     camera.layers.enable( 0 );
@@ -97,7 +97,7 @@ function setControls(){
     controls.addEventListener( 'change', render );
     controls.minDistance = 10;
     controls.maxDistance = 5000;
-    controls.enablePan = false;
+    controls.enablePan = true;
 }
 
 function createRenderer(){
@@ -129,7 +129,7 @@ function loadMeshes(){
     aws_loader.setDRACOLoader(dracoLoader);
     
 
-    aws_loader.load('test.glb', function(test){
+    /*aws_loader.load('test.glb', function(test){
         console.log("Added test mesh from amazon!")
         console.log(test.scene)
         test.scene.traverse( function(child) {
@@ -137,7 +137,7 @@ function loadMeshes(){
             scene.add(child)
         })
         render();
-    })
+    })*/
 
     loader.load('test_mesh.glb', function(test){
         console.log("Added test_mesh from local")
@@ -150,7 +150,7 @@ function loadMeshes(){
         render();
     })
 
-    aws_loader.load('teatro_decimated_compressed.glb', function(full_packed){
+    loader.load('teatro_decimated_compressed.glb', function(full_packed){
         console.log("Added teatro_decimated_compressed from amazon")
         console.log(full_packed.scene)
         full_packed.scene.traverse( function(child) {
@@ -158,6 +158,15 @@ function loadMeshes(){
             scene.add(child)
         })
     })
+
+    /*aws_loader.load('teatro_decimated_compressed.glb', function(full_packed){
+        console.log("Added teatro_decimated_compressed from amazon")
+        console.log(full_packed.scene)
+        full_packed.scene.traverse( function(child) {
+            child.layers.set( 1 )
+            scene.add(child)
+        })
+    })*/
 
     /*aws_loader.load('teatro_decimated.glb', function(full_packed){
         console.log("Added teatro_decimated from amazon")
