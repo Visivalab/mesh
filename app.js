@@ -5,10 +5,15 @@ const port = 3000
 app.set('views', './views')
 app.set('view engine', 'pug')
 
-app.use(express.static('public'))
+app.use('/public', express.static('public'))
+app.use('/mesh', express.static('mesh'));
 
 app.get('/', (req, res) => {
-  res.render('index', { title:'Admin Page', message: 'Hola admin' })
+  res.render('index', { title:'Admin Page' })
+})
+
+app.get('/admin', (req, res) => {
+    res.render('admin/index', { title:'Admin Page' })
 })
 
 app.listen(port, () => {
