@@ -8,5 +8,5 @@ const meshSchema = new mongoose.Schema({
     layers: [ mongoose.ObjectId ]
 })
 // A patir del schema, creamos un modelo.
-module.exports = mongoose.model('Mesh', meshSchema)
+module.exports = mongoose.model('Mesh', meshSchema, 'meshes')
 // Con este modelo ya podemos crear tantos elementos como queramos que van a seguir el patrón del schema

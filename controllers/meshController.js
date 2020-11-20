@@ -16,3 +16,11 @@ exports.upload = function(req,res){
     
     res.send('Uploaded')
 }
+
+exports.getMesh = function(req,res){
+    Mesh.find({}, function(err,finded){
+        if(err) console.log(err)
+        console.log(finded)
+        res.json(finded)
+    })
+}

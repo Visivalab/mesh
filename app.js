@@ -35,6 +35,7 @@ app.get('/admin', (req, res) => {
     res.render('admin/index', { title:'Admin Page' })
 })
 app.get('/upload', meshController.upload)
+app.get('/mesh', meshController.getMesh)
 
 
 app.listen(port, () => {

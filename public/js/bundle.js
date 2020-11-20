@@ -54012,15 +54012,35 @@ function loadMeshes(){
 
     const loader = new GLTFLoader().setPath('./public/meshes/');
     const aws_loader = new GLTFLoader().setPath('https://meshview.s3.eu-west-3.amazonaws.com/');
+    const api_loader = new GLTFLoader();
     
     // Las meshes estan comprimidas con DRACO para que pesen MUCHISIMO menos, pero se necesita el descodificador draco para cargarlas.
     // https://threejs.org/docs/#examples/en/loaders/GLTFLoader
     const dracoLoader = new DRACOLoader();
     dracoLoader.setDecoderPath('./draco/'); // Para incluir los decoders hay definida una ruta en main.js a su carpeta dentro del module three de node_modules
     
-    loader.setDRACOLoader(dracoLoader);
-    aws_loader.setDRACOLoader(dracoLoader);
-    
+    loader.setDRACOLoader(dracoLoader); // Carga elementos de la carpeta pública
+    aws_loader.setDRACOLoader(dracoLoader); // Carga elementos con el link de aws
+    api_loader.setDRACOLoader(dracoLoader); // Carga elementos de aws que agarra de la base de datos
+
+    //Para cargarlo desde el json en /mesh,
+    //recorrer el json(que al final deberia tener un solo elemento con layers) y obtener la url del elemento
+    //Luego el api_loader tiene que usar esta url
+    fetch('/mesh')
+        .then( res => {
+            return res.json()
+        })
+        .then( fi => {
+            console.log("Found ",fi);
+            api_loader.load(fi[0].url, function(test){
+                console.log(test.scene);
+                test.scene.traverse( function(child) {
+                    child.layers.set( 1 );
+                    scene.add(child);
+                });
+                render();
+            });
+        });
 
     /*aws_loader.load('test.glb', function(test){
         console.log("Added test mesh from amazon!")
@@ -54032,25 +54052,25 @@ function loadMeshes(){
         render();
     })*/
 
-    loader.load('test_mesh.glb', function(test){
-        console.log("Added test_mesh from local");
-        console.log(test.scene);
+    /*loader.load('test_mesh.glb', function(test){
+        console.log("Added test_mesh from local")
+        console.log(test.scene)
         //Un gltf tiene una escena con hijos, que son los elementos 3d. Cada uno de estos tambien puede tener hijos. Como un arbol de 3ds. traverse recorre todos estos hijos
         test.scene.traverse( function(child) {
-            child.layers.set( 2 );
-            scene.add(child);
-        });
+            child.layers.set( 2 )
+            scene.add(child)
+        })
         render();
-    });
+    })*/
 
-    loader.load('teatro_decimated_compressed.glb', function(full_packed){
-        console.log("Added teatro_decimated_compressed from amazon");
-        console.log(full_packed.scene);
+    /*loader.load('teatro_decimated_compressed.glb', function(full_packed){
+        console.log("Added teatro_decimated_compressed from amazon")
+        console.log(full_packed.scene)
         full_packed.scene.traverse( function(child) {
-            child.layers.set( 1 );
-            scene.add(child);
-        });
-    });
+            child.layers.set( 1 )
+            scene.add(child)
+        })
+    })*/
 
     /*aws_loader.load('teatro_decimated_compressed.glb', function(full_packed){
         console.log("Added teatro_decimated_compressed from amazon")
