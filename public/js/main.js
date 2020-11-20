@@ -116,7 +116,7 @@ function createRenderer(){
 
 function loadMeshes(){
 
-    const loader = new GLTFLoader().setPath('./models/');
+    const loader = new GLTFLoader().setPath('./mesh/');
 
     loader.load('test.gltf', function(test){
         console.log("Added test mesh")
