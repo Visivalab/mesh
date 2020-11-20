@@ -53378,10 +53378,11 @@ function createRenderer(){
 
 function loadMeshes(){
 
-    const loader = new GLTFLoader().setPath('./mesh/');
+    const loader = new GLTFLoader().setPath('./public/meshes/');
+    const aws_loader = new GLTFLoader().setPath('https://meshview.s3.eu-west-3.amazonaws.com/');
 
-    loader.load('test.gltf', function(test){
-        console.log("Added test mesh");
+    aws_loader.load('test.glb', function(test){
+        console.log("Added test mesh from amazon!");
         console.log(test.scene);
         test.scene.traverse( function(child) {
             child.layers.set( 2 );
@@ -53390,8 +53391,8 @@ function loadMeshes(){
         render();
     });
 
-    loader.load('test2.gltf', function(test){
-        console.log("Added test2 mesh");
+    loader.load('test_mesh.glb', function(test){
+        console.log("Added test_mesh from local");
         console.log(test.scene);
         //Un gltf tiene una escena con hijos, que son los elementos 3d. Cada uno de estos tambien puede tener hijos. Como un arbol de 3ds. traverse recorre todos estos hijos
         test.scene.traverse( function(child) {
@@ -53401,8 +53402,8 @@ function loadMeshes(){
         render();
     });
 
-    loader.load('gltf/full_mesh.glb', function(full_packed){
-        console.log("Added full_mesh");
+    aws_loader.load('teatro.glb', function(full_packed){
+        console.log("Added teatro from amazon");
         console.log(full_packed.scene);
         full_packed.scene.traverse( function(child) {
             child.layers.set( 0 );

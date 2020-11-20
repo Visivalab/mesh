@@ -1,15 +1,16 @@
 const express = require('express')
+const cors = require('cors')
 const app = express()
 const port = 3000
 
 app.set('views', './views')
 app.set('view engine', 'pug')
 
+//app.use(cors())
 app.use('/public', express.static('public'))
-app.use('/mesh', express.static('mesh'));
 
 app.get('/', (req, res) => {
-  res.render('index', { title:'Admin Page' })
+  res.render('index', { title:'Visor 3D' })
 })
 
 app.get('/admin', (req, res) => {
