@@ -8,6 +8,7 @@ app.set('view engine', 'pug')
 
 //app.use(cors())
 app.use('/public', express.static('public'))
+app.use('/draco', express.static('node_modules/three/examples/js/libs/draco/gltf'))
 
 app.get('/', (req, res) => {
   res.render('index', { title:'Visor 3D' })
@@ -18,5 +19,5 @@ app.get('/admin', (req, res) => {
 })
 
 app.listen(port, () => {
-  console.log(`Example app listening at http://localhost:${port}`)
+  console.log(`App en marcha -> http://localhost:${port}`)
 })

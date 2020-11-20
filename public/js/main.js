@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { GUI } from 'three/examples/jsm/libs/dat.gui.module.js';
+import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader';
 
 let renderer, scene, camera, controls;
 
@@ -106,7 +107,7 @@ function createRenderer(){
     renderer.setSize( window.innerWidth, window.innerHeight );
 
     //Esto y el antialias le da a saco de calidad al render, pero no sé exactamente como
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    //renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1;
     renderer.outputEncoding = THREE.sRGBEncoding;
 
@@ -118,12 +119,21 @@ function loadMeshes(){
 
     const loader = new GLTFLoader().setPath('./public/meshes/');
     const aws_loader = new GLTFLoader().setPath('https://meshview.s3.eu-west-3.amazonaws.com/');
+    
+    // Las meshes estan comprimidas con DRACO para que pesen MUCHISIMO menos, pero se necesita el descodificador draco para cargarlas.
+    // https://threejs.org/docs/#examples/en/loaders/GLTFLoader
+    const dracoLoader = new DRACOLoader();
+    dracoLoader.setDecoderPath('./draco/'); // Para incluir los decoders hay definida una ruta en main.js a su carpeta dentro del module three de node_modules
+    
+    loader.setDRACOLoader(dracoLoader);
+    aws_loader.setDRACOLoader(dracoLoader);
+    
 
     aws_loader.load('test.glb', function(test){
         console.log("Added test mesh from amazon!")
         console.log(test.scene)
         test.scene.traverse( function(child) {
-            child.layers.set( 2 )
+            child.layers.set( 1 )
             scene.add(child)
         })
         render();
@@ -134,20 +144,29 @@ function loadMeshes(){
         console.log(test.scene)
         //Un gltf tiene una escena con hijos, que son los elementos 3d. Cada uno de estos tambien puede tener hijos. Como un arbol de 3ds. traverse recorre todos estos hijos
         test.scene.traverse( function(child) {
-            child.layers.set( 1 )
+            child.layers.set( 2 )
             scene.add(child)
         })
         render();
     })
 
-    aws_loader.load('teatro.glb', function(full_packed){
-        console.log("Added teatro from amazon")
+    aws_loader.load('teatro_decimated_compressed.glb', function(full_packed){
+        console.log("Added teatro_decimated_compressed from amazon")
         console.log(full_packed.scene)
         full_packed.scene.traverse( function(child) {
-            child.layers.set( 0 )
+            child.layers.set( 1 )
             scene.add(child)
         })
     })
+
+    /*aws_loader.load('teatro_decimated.glb', function(full_packed){
+        console.log("Added teatro_decimated from amazon")
+        console.log(full_packed.scene)
+        full_packed.scene.traverse( function(child) {
+            child.layers.set( 2 )
+            scene.add(child)
+        })
+    })*/
 }
 
 function init() {
