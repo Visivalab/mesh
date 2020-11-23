@@ -2,70 +2,56 @@ import * as THREE from 'three'; // https://threejs.org/docs/#api/en/loaders/Load
 
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { GUI } from 'three/examples/jsm/libs/dat.gui.module.js';
+//import { GUI } from 'three/examples/jsm/libs/dat.gui.module.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader';
 
 let renderer, scene, camera, controls;
+let gui;
 
 init();
 
 function createGui() {
 
-    // Crear el GUI
-    const gui = new GUI();
-    gui.domElement.id = 'gui';
-    gui.width = 220;
 
-    // Definir las capas y sus funcionalidades
-    const layers = {
-        layer_0: function () {
-            camera.layers.toggle( 0 );
-            render();
-        },
-        layer_1: function () {
-            camera.layers.toggle( 1 );
-            render();
-        },
-        layer_2: function () {
-            camera.layers.toggle( 2 );
-            render();
-        },
-        all: function () {
-            camera.layers.enableAll();
-            render();
-        },
-        none: function () {
-            camera.layers.disableAll();
-            render();
-        },
-        sunlight: function (){
-            camera.layers.toggle(3);
-            render();
-        }
-    };
+  gui = document.createElement('div')
+  gui.className = 'gui';
+  document.querySelector('body').appendChild(gui)
 
-    // Crear estructura de carpetas y linkar cada layer a su funcionalidad
-    //let folder__layers = gui.addFolder('Layers');
-    //let folder__lights = gui.addFolder('Lights');
+  /*
+  let layer1 = document.createElement('div')
+  layer1.className = 'gui__layer'
+  layer1.textContent = 'Layer 1'
+  layer1.addEventListener('click', () => {
+    camera.layers.toggle( 0 )
+    render()
+  })
+  gui.appendChild(layer1)
+  */
+  let layer2 = document.createElement('div')
+  layer2.className = 'gui__layer'
+  layer2.textContent = 'Enable all'
+  layer2.addEventListener('click', () => {
+    camera.layers.enableAll()
+    render()
+  })
+  gui.appendChild(layer2)
 
-    gui.add(layers,'layer_0')
-      .name('Base layer');
-    gui.add(layers,'layer_1')
-      .name('Layer 1');
-    gui.add(layers,'layer_2')
-      .name('Layer 2');
-    gui.addFolder('');
-    gui.add(layers,'all')
-      .name('Enable all');
-    gui.add(layers,'none')
-      .name('Disable all');
+  let layer3 = document.createElement('div')
+  layer3.className = 'gui__layer'
+  layer3.textContent = 'Disable all'
+  layer3.addEventListener('click', () => {
+    camera.layers.disableAll()
+    render()
+  })
+  gui.appendChild(layer3)
 
+  
 }
 
 function createCamera(){
     
     camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 10000 );
-    camera.position.set( - 1000, 1000, 1000 );
+    camera.position.set( - 100, 100, 100 );
     
     // Ponemos la camara en cada layer
     camera.layers.enable( 0 );
@@ -115,90 +101,73 @@ function createRenderer(){
 
 }
 
+function loadLayer(id,data){
+  const api_loader = new GLTFLoader();
+  
+  // Las meshes estan comprimidas con DRACO para que pesen MUCHISIMO menos, pero se necesita el descodificador draco para cargarlas - https://threejs.org/docs/#examples/en/loaders/GLTFLoader
+  const dracoLoader = new DRACOLoader();
+  dracoLoader.setDecoderPath('./draco/'); // Para incluir los decoders hay definida una ruta en main.js a su carpeta dentro del module three de node_modules
+  api_loader.setDRACOLoader(dracoLoader); // Carga elementos de aws que agarra de la base de datos
+
+  api_loader.load(
+    data.url, 
+    function(glb){
+      console.group('Loading layer')
+      console.log("DB layer info: ", data)
+      console.log("Poner en la capa "+id)
+      console.log("glb info: ", glb)
+
+      scene.add(glb.scene)
+
+      // Todos los hijos de la escena deben tener el layer, no vale con setear solamente la escena. traverse recorre todos los hijos
+      glb.scene.traverse( function(child) {
+        child.layers.set( id )
+      })
+
+      render();
+      console.groupEnd()
+    },
+    function(xhr){
+      let layer = document.querySelector('#guiLayer_'+id)
+      layer.textContent = Math.round( xhr.loaded / xhr.total * 100 ) + '%'
+    },
+    function(error){
+      console.log( 'An error happened',error );
+    }
+  );
+
+}
+
 function loadMeshes(){
 
-    const loader = new GLTFLoader().setPath('./public/meshes/');
-    const aws_loader = new GLTFLoader().setPath('https://meshview.s3.eu-west-3.amazonaws.com/');
-    const api_loader = new GLTFLoader();
     
-    // Las meshes estan comprimidas con DRACO para que pesen MUCHISIMO menos, pero se necesita el descodificador draco para cargarlas.
-    // https://threejs.org/docs/#examples/en/loaders/GLTFLoader
-    const dracoLoader = new DRACOLoader();
-    dracoLoader.setDecoderPath('./draco/'); // Para incluir los decoders hay definida una ruta en main.js a su carpeta dentro del module three de node_modules
-    
-    loader.setDRACOLoader(dracoLoader); // Carga elementos de la carpeta pública
-    aws_loader.setDRACOLoader(dracoLoader); // Carga elementos con el link de aws
-    api_loader.setDRACOLoader(dracoLoader); // Carga elementos de aws que agarra de la base de datos
-
-    //Para cargarlo desde el json en /mesh,
-    //recorrer el json(que al final deberia tener un solo elemento con layers) y obtener la url del elemento
-    //Luego el api_loader tiene que usar esta url
     fetch('/mesh')
-        .then( res => {
-            return res.json()
-        })
-        .then( fi => {
-            console.log("Found ",fi)
-            api_loader.load(fi[0].url, function(test){
-                console.log(test.scene)
-                test.scene.traverse( function(child) {
-                    child.layers.set( 1 )
-                    scene.add(child)
-                })
-                render();
-            });
-        })
+      .then( response => {
+        return response.json()
+      })
+      .then( result => {
+        console.log("Found ", result)
+        for(let i=0; i<result.length; i++){
 
-    /*aws_loader.load('test.glb', function(test){
-        console.log("Added test mesh from amazon!")
-        console.log(test.scene)
-        test.scene.traverse( function(child) {
-            child.layers.set( 1 )
-            scene.add(child)
-        })
-        render();
-    })*/
+          let layer = document.createElement('div')
+          layer.id = 'guiLayer_'+i
+          layer.className = 'gui__layer'
+          layer.textContent = 'Layer '+i
+          layer.addEventListener('click', () => {
+            camera.layers.toggle( i )
+            render()
+          })
+          gui.appendChild(layer)
 
-    /*loader.load('test_mesh.glb', function(test){
-        console.log("Added test_mesh from local")
-        console.log(test.scene)
-        //Un gltf tiene una escena con hijos, que son los elementos 3d. Cada uno de estos tambien puede tener hijos. Como un arbol de 3ds. traverse recorre todos estos hijos
-        test.scene.traverse( function(child) {
-            child.layers.set( 2 )
-            scene.add(child)
-        })
-        render();
-    })*/
+          loadLayer(i,result[i])
 
-    /*loader.load('teatro_decimated_compressed.glb', function(full_packed){
-        console.log("Added teatro_decimated_compressed from amazon")
-        console.log(full_packed.scene)
-        full_packed.scene.traverse( function(child) {
-            child.layers.set( 1 )
-            scene.add(child)
-        })
-    })*/
-
-    /*aws_loader.load('teatro_decimated_compressed.glb', function(full_packed){
-        console.log("Added teatro_decimated_compressed from amazon")
-        console.log(full_packed.scene)
-        full_packed.scene.traverse( function(child) {
-            child.layers.set( 1 )
-            scene.add(child)
-        })
-    })*/
-
-    /*aws_loader.load('teatro_decimated.glb', function(full_packed){
-        console.log("Added teatro_decimated from amazon")
-        console.log(full_packed.scene)
-        full_packed.scene.traverse( function(child) {
-            child.layers.set( 2 )
-            scene.add(child)
-        })
-    })*/
+        }
+      })
 }
 
 function init() {
+
+    console.log("Creamos la escena three")
 
     //Crear la escena con su background bien bonito
     scene = new THREE.Scene();

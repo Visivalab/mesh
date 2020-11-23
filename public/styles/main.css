@@ -4,8 +4,10 @@ html,body{
 }
 
 /* DAT GUI */
-#gui{
+.gui{
   position: fixed;
+  width: 200px;
+  height: 200px;
   top: 20px;
   right: 20px;
   margin-right: 0;
@@ -13,25 +15,11 @@ html,body{
   background-color: white;
   box-shadow: 0px 0px 10px 0px rgba(0,0,0,0.1);
 }
-#gui.dg{
+.gui__layer{
   font-family: 'Raleway';
   font-weight: 300;
   font-size: 1rem;
   color: rgb(34, 34, 34);
-  text-shadow: none;
-}
-#gui.dg ul{
   padding: 10px 20px;
   box-sizing: border-box;
-}
-#gui.dg .cr.function{
-  padding: 2px 0;
-  border-left: none;
-}
-#gui.dg li:not(.folder){
-  background: unset;
-  border-bottom: none;
-}
-#gui.dg.main .close-button.close-bottom{
-  display: none;
 }
