@@ -14,6 +14,7 @@ function createGui() {
     // Crear el GUI
     const gui = new GUI();
     gui.domElement.id = 'gui';
+    gui.width = 220;
 
     // Definir las capas y sus funcionalidades
     const layers = {
@@ -44,21 +45,20 @@ function createGui() {
     };
 
     // Crear estructura de carpetas y linkar cada layer a su funcionalidad
-    let folder__layers = gui.addFolder('Layers');
-    let folder__lights = gui.addFolder('Lights');
+    //let folder__layers = gui.addFolder('Layers');
+    //let folder__lights = gui.addFolder('Lights');
 
-    folder__layers.add(layers,'layer_0')
-        .name('Base layer');
-    folder__layers.add(layers,'layer_1')
-        .name('Layer 1');
-    folder__layers.add(layers,'layer_2')
-        .name('Layer 2');
-    folder__layers.add(layers,'all')
-        .name('Enable all');
-    folder__layers.add(layers,'none')
-        .name('Disable all');
-    folder__lights.add(layers, 'sunlight')
-        .name('Sunlight');
+    gui.add(layers,'layer_0')
+      .name('Base layer');
+    gui.add(layers,'layer_1')
+      .name('Layer 1');
+    gui.add(layers,'layer_2')
+      .name('Layer 2');
+    gui.addFolder('');
+    gui.add(layers,'all')
+      .name('Enable all');
+    gui.add(layers,'none')
+      .name('Disable all');
 
 }
 
