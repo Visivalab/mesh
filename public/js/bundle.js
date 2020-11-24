@@ -50362,6 +50362,7 @@ function createGui() {
   document.querySelector('body').appendChild(gui);
   let defaultOptions = createGuiGroup('defaultOptions','');
   let layers = createGuiGroup('layers','');
+  let separator = createGuiSeparator();
 
   let enableAll = createGuiElement('enableAll','Enable all', function(){
     camera.layers.enableAll();
@@ -50377,8 +50378,16 @@ function createGui() {
   defaultOptions.appendChild(disableAll);
 
   gui.appendChild(layers);
+  gui.appendChild(separator);
   gui.appendChild(defaultOptions);
   
+}
+
+function createGuiSeparator(){
+  let separator = document.createElement('div');
+  separator.className = 'gui__separator';
+  
+  return separator
 }
 
 function createGuiGroup(id,text,callback = null){
