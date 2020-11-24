@@ -14,20 +14,39 @@ function createGui() {
   gui = document.createElement('div')
   gui.className = 'gui';
   document.querySelector('body').appendChild(gui)
-  
-  createGuiElement('enableAll','Enable all', function(){
+  let defaultOptions = createGuiGroup('defaultOptions','')
+  let layers = createGuiGroup('layers','')
+
+  let enableAll = createGuiElement('enableAll','Enable all', function(){
     camera.layers.enableAll()
     render()
   })
 
-  createGuiElement('disableAll','Disable all', function(){
+  let disableAll = createGuiElement('disableAll','Disable all', function(){
     camera.layers.disableAll()
     render()
   })
   
+  defaultOptions.appendChild(enableAll)
+  defaultOptions.appendChild(disableAll)
+
+  gui.appendChild(layers)
+  gui.appendChild(defaultOptions)
+  
 }
 
-function createGuiElement(id,name,callback){
+function createGuiGroup(id,text,callback = null){
+  let group = document.createElement('div')
+  group.className = 'gui__group'
+  group.id = id
+  group.textContent = text
+
+  group.addEventListener('click', callback)
+
+  return group
+}
+
+function createGuiElement(id,name,callback = null){
   let layer = document.createElement('div')
   layer.className = 'gui__element'
   layer.id = id
@@ -38,7 +57,8 @@ function createGuiElement(id,name,callback){
   layer.appendChild(info)
 
   layer.addEventListener('click', callback)
-  gui.appendChild(layer)
+
+  return layer
 }
 
 function createCamera(){
@@ -133,10 +153,11 @@ function loadMeshes(){
     console.log("Found ", result)
     for(let i=0; i<result.length; i++){ // En un for normal porque los layers deben tener numeros del 0 al 31 - https://threejs.org/docs/#api/en/core/Layers
 
-      createGuiElement(`layer_${i}`, result[i].name, function(){
+      let guiLayer = createGuiElement(`layer_${i}`, result[i].name, function(){
         camera.layers.toggle( i )
         render()
       })
+      document.querySelector('.gui #layers').appendChild(guiLayer)
 
       loadLayer(i,result[i])
 
