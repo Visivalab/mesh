@@ -118,7 +118,7 @@ function loadLayer(id,data){
   
   // Las meshes estan comprimidas con DRACO para que pesen MUCHISIMO menos, pero se necesita el descodificador draco para cargarlas - https://threejs.org/docs/#examples/en/loaders/GLTFLoader
   const dracoLoader = new DRACOLoader();
-  dracoLoader.setDecoderPath('./draco/'); // Para incluir los decoders hay definida una ruta en main.js a su carpeta dentro del module three de node_modules
+  dracoLoader.setDecoderPath('/draco/'); // Para incluir los decoders hay definida una ruta en main.js a su carpeta dentro del module three de node_modules
   api_loader.setDRACOLoader(dracoLoader); // Carga elementos de aws que agarra de la base de datos
 
   api_loader.load(
@@ -153,22 +153,27 @@ function loadLayer(id,data){
 
 }
 
-function loadMeshes(){    
-  fetch('/mesh')
+function loadMeshes(){
+  let pathProjectId = window.location.pathname.split('/').pop()
+  
+  fetch('/api/project/'+pathProjectId)
   .then( response => {
     return response.json()
   })
-  .then( result => {
-    console.log("Found ", result)
-    for(let i=0; i<result.length; i++){ // En un for normal porque los layers deben tener numeros del 0 al 31 - https://threejs.org/docs/#api/en/core/Layers
+  .then( project => {
+    console.log(`Project: ${project._id}`, project)
+    
+    let meshes = project.meshes;
 
-      let guiLayer = createGuiElement(`layer_${i}`, result[i].name, function(){
+    for(let i=0; i<meshes.length; i++){ // En un for normal porque los layers deben tener numeros del 0 al 31 - https://threejs.org/docs/#api/en/core/Layers
+
+      let guiLayer = createGuiElement(`layer_${i}`, meshes[i].name, function(){
         camera.layers.toggle( i )
         render()
       })
       document.querySelector('.gui #layers').appendChild(guiLayer)
 
-      loadLayer(i,result[i])
+      loadLayer(i,meshes[i])
 
     }
   })

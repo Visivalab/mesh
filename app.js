@@ -27,16 +27,18 @@ app.use('/draco', express.static('node_modules/three/examples/js/libs/draco/gltf
 
 // Definir rutas (Poner en otro lado)
 const meshController = require('./controllers/meshController')
+const projectController = require('./controllers/projectController')
 
-app.get('/', (req, res) => {
-  res.render('index', { title:'Visor 3D' })
+app.get('/view/:id', (req, res) => {
+  res.render('index', { title:'Mesh view' })
 })
 app.get('/admin', (req, res) => {
-    res.render('admin/index', { title:'Admin Page' })
+  res.render('admin/index', { title:'Admin Page' })
 })
-app.get('/upload', meshController.upload)
-app.get('/mesh', meshController.getMesh)
-
+//app.post('/api/upload', meshController.upload)
+//app.get('/api/projects', projectController.allProjects)
+app.get('/api/project/:id', projectController.project)
+//app.get('/api/mesh', meshController.getMesh)
 
 app.listen(port, () => {
   console.log(`App en marcha -> http://localhost:${port}`)
