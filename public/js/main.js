@@ -5,99 +5,82 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 //import { GUI } from 'three/examples/jsm/libs/dat.gui.module.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader';
 
-let renderer, scene, camera, controls;
+let renderer, scene, camera, controls, ambientLight;
 let gui;
 
 init();
 
 function createGui() {
-
-
   gui = document.createElement('div')
   gui.className = 'gui';
   document.querySelector('body').appendChild(gui)
-
-  /*
-  let layer1 = document.createElement('div')
-  layer1.className = 'gui__layer'
-  layer1.textContent = 'Layer 1'
-  layer1.addEventListener('click', () => {
-    camera.layers.toggle( 0 )
-    render()
-  })
-  gui.appendChild(layer1)
-  */
-  let layer2 = document.createElement('div')
-  layer2.className = 'gui__layer'
-  layer2.textContent = 'Enable all'
-  layer2.addEventListener('click', () => {
+  
+  createGuiElement('enableAll','Enable all', function(){
     camera.layers.enableAll()
     render()
   })
-  gui.appendChild(layer2)
 
-  let layer3 = document.createElement('div')
-  layer3.className = 'gui__layer'
-  layer3.textContent = 'Disable all'
-  layer3.addEventListener('click', () => {
+  createGuiElement('disableAll','Disable all', function(){
     camera.layers.disableAll()
     render()
   })
-  gui.appendChild(layer3)
-
   
+}
+
+function createGuiElement(id,name,callback){
+  let layer = document.createElement('div')
+  layer.className = 'gui__element'
+  layer.id = id
+  layer.textContent = name
+  
+  let info = document.createElement('div')
+  info.className = 'gui__element__info'
+  layer.appendChild(info)
+
+  layer.addEventListener('click', callback)
+  gui.appendChild(layer)
 }
 
 function createCamera(){
     
-    camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 10000 );
-    camera.position.set( - 100, 100, 100 );
-    
-    // Ponemos la camara en cada layer
-    camera.layers.enable( 0 );
-    camera.layers.enable( 1 );
-    camera.layers.enable( 2 );
-    camera.layers.enable( 3 );
-
-    scene.add( camera );
+  camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 10000 );
+  camera.position.set( - 100, 100, 100 );
+  
+  camera.layers.enable( 0 );
+  scene.add( camera );
 
 }
 
 function createLights(){
 
-    // ambient light
-    const ambient = new THREE.AmbientLight( 0xfcba43, .2 );
-    ambient.layers.set( 3 );
-
-    // point light
-    const sunlight = new THREE.PointLight( 0xffffff, 1.5 );
-    sunlight.layers.set( 3 ); //Set hace que se ponga en esta capa y se quite de todas las demás. Enable hace que se ponga en la capa, si está en otra seguirá en la otra tambien
-
-    scene.add( ambient );
-    camera.add( sunlight ); // Esta luz sale de la camara
+  ambientLight = new THREE.AmbientLight( 0xffffff, 1.5 );
+  scene.add( ambientLight );
 
 }
 
 function setControls(){
-    controls = new OrbitControls( camera, renderer.domElement );
-    controls.addEventListener( 'change', render );
-    controls.minDistance = 10;
-    controls.maxDistance = 5000;
-    controls.enablePan = true;
+  controls = new OrbitControls( camera, renderer.domElement );
+  controls.addEventListener( 'change', render );
+  controls.minDistance = 10;
+  controls.maxDistance = 5000;
+  controls.enablePan = true;
 }
 
 function createRenderer(){
     
-    renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio( window.devicePixelRatio );
-    renderer.setSize( window.innerWidth, window.innerHeight );
+  renderer = new THREE.WebGLRenderer({ 
+    antialias: true,
+    physicallyCorrectLights: true 
+  });
+  renderer.setPixelRatio( window.devicePixelRatio );
+  renderer.setSize( window.innerWidth, window.innerHeight );
 
-    //Esto y el antialias le da a saco de calidad al render, pero no sé exactamente como
-    //renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1;
-    renderer.outputEncoding = THREE.sRGBEncoding;
+  //Esto y el antialias le da a saco de calidad al render, pero no sé exactamente como
+  //renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1;
+  renderer.outputEncoding = THREE.sRGBEncoding;
 
-    document.body.appendChild( renderer.domElement );
+  document.body.appendChild( renderer.domElement );
 
 }
 
@@ -124,11 +107,14 @@ function loadLayer(id,data){
         child.layers.set( id )
       })
 
+      ambientLight.layers.enable( id );
+      camera.layers.enable( id )
+
       render();
       console.groupEnd()
     },
     function(xhr){
-      let layer = document.querySelector('#guiLayer_'+id)
+      let layer = document.querySelector('#layer_'+id+' .gui__element__info')
       layer.textContent = Math.round( xhr.loaded / xhr.total * 100 ) + '%'
     },
     function(error){
@@ -138,69 +124,55 @@ function loadLayer(id,data){
 
 }
 
-function loadMeshes(){
+function loadMeshes(){    
+  fetch('/mesh')
+  .then( response => {
+    return response.json()
+  })
+  .then( result => {
+    console.log("Found ", result)
+    for(let i=0; i<result.length; i++){ // En un for normal porque los layers deben tener numeros del 0 al 31 - https://threejs.org/docs/#api/en/core/Layers
 
-    
-    fetch('/mesh')
-      .then( response => {
-        return response.json()
+      createGuiElement(`layer_${i}`, result[i].name, function(){
+        camera.layers.toggle( i )
+        render()
       })
-      .then( result => {
-        console.log("Found ", result)
-        for(let i=0; i<result.length; i++){
 
-          let layer = document.createElement('div')
-          layer.id = 'guiLayer_'+i
-          layer.className = 'gui__layer'
-          layer.textContent = 'Layer '+i
-          layer.addEventListener('click', () => {
-            camera.layers.toggle( i )
-            render()
-          })
-          gui.appendChild(layer)
+      loadLayer(i,result[i])
 
-          loadLayer(i,result[i])
-
-        }
-      })
+    }
+  })
 }
 
 function init() {
 
-    console.log("Creamos la escena three")
+  //Crear la escena con su background bien bonito
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color( 0xbfe3dd );
 
-    //Crear la escena con su background bien bonito
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color( 0xbfe3dd );
+  createCamera();
+  createLights();
+  createRenderer();
+  createGui();
+  setControls();
 
-    createCamera();
-    createLights();
-    createRenderer();
-    createGui();
-    setControls();
+  loadMeshes();
+
+  render();
   
-    loadMeshes();
-
-    render();
-    
-    window.addEventListener( 'resize', onWindowResize, false );
-
+  window.addEventListener( 'resize', onWindowResize, false );
 }
 
 function onWindowResize() {
+  renderer.setSize( window.innerWidth, window.innerHeight ); // Actualiza el tamaño del visor
 
-    renderer.setSize( window.innerWidth, window.innerHeight ); // Actualiza el tamaño del visor
+  // Actualiza el tamaño de la camara, sino los elementos se estiran y se chafan
+  camera.aspect = window.innerWidth / window.innerHeight; 
+  camera.updateProjectionMatrix();
 
-    // Actualiza el tamaño de la camara, sino los elementos se estiran y se chafan
-    camera.aspect = window.innerWidth / window.innerHeight; 
-    camera.updateProjectionMatrix();
-
-    render();
-
+  render();
 }
 
 function render() {
-
-    renderer.render( scene, camera );
-
+  renderer.render( scene, camera );
 }

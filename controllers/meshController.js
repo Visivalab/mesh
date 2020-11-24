@@ -18,7 +18,11 @@ exports.upload = function(req,res){
 }
 
 exports.getMesh = function(req,res){
-    Mesh.find({}, function(err,finded){
+    Mesh.find(
+      {}, // Todo 
+      null, // Sin cosas especificas
+      {sort: {date: 1}}, // Opciones
+      function(err,finded){ // Callback
         if(err) console.log(err)
         console.log(finded)
         res.json(finded)
