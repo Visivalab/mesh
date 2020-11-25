@@ -6,7 +6,11 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader';
 
 let renderer, scene, camera, controls, ambientLight;
-let gui;
+let container, gui;
+let mesh;
+
+const raycaster = new THREE.Raycaster()
+const mouse = new THREE.Vector2()
 
 init();
 
@@ -109,7 +113,7 @@ function createRenderer(){
   renderer.toneMappingExposure = 1;
   renderer.outputEncoding = THREE.sRGBEncoding;
 
-  document.body.appendChild( renderer.domElement );
+  container.appendChild( renderer.domElement );
 
 }
 
@@ -129,6 +133,7 @@ function loadLayer(id,data){
       console.log("Poner en la capa "+id)
       console.log("glb info: ", glb)
 
+      mesh = glb.scene
       scene.add(glb.scene)
 
       // Todos los hijos de la escena deben tener el layer, no vale con setear solamente la escena. traverse recorre todos los hijos
@@ -136,8 +141,9 @@ function loadLayer(id,data){
         child.layers.set( id )
       })
 
-      ambientLight.layers.enable( id );
+      ambientLight.layers.enable( id )
       camera.layers.enable( id )
+      raycaster.layers.enable( id )
 
       render();
       console.groupEnd()
@@ -181,6 +187,11 @@ function loadMeshes(){
 
 function init() {
 
+  container = document.querySelector('#viewer')
+  
+  container.addEventListener('click', mouseClick, false)
+
+
   //Crear la escena con su background bien bonito
   scene = new THREE.Scene();
   scene.background = new THREE.Color( 0xbfe3dd );
@@ -210,4 +221,60 @@ function onWindowResize() {
 
 function render() {
   renderer.render( scene, camera );
+}
+
+
+
+
+const geometry = new THREE.Geometry();
+
+function mouseClick(event){
+  
+  mouse.x = ( event.clientX / renderer.domElement.clientWidth ) * 2 - 1
+  mouse.y = - ( event.clientY / renderer.domElement.clientHeight ) * 2 + 1
+  raycaster.setFromCamera( mouse, camera )
+
+  let intersects = raycaster.intersectObjects(scene.children, true)
+  let [px,py,pz] = [intersects[0].point.x, intersects[0].point.y, intersects[0].point.z]
+
+  drawPoint(px, py, pz)
+  
+  geometry.vertices.push( new THREE.Vector3(px, py, pz) )
+  if(geometry.vertices.length === 3){
+    //const normal = new THREE.Vector3( 0, 0, 1 ); //optional
+    //const color = new THREE.Color( 0xffaa00 ); //optional
+    //const materialIndex = 0; //optional
+    const geometrymaterial = new THREE.MeshStandardMaterial( { 
+      color: 0x00cc00,
+      side: 2
+    } );
+    //geometrymaterial.side = THREE.DoubleSide
+    //geometrymaterial.shadowSide = THREE.DoubleSide
+    geometry.faces = [
+      new THREE.Face3( 0, 1, 2 )
+    ]
+    //geometry.computeFaceNormals();
+    //geometry.computeVertexNormals();
+    
+    scene.add( new THREE.Mesh( geometry, geometrymaterial ) );
+  }
+  render()
+
+  console.log(intersects)
+  
+  /*setTimeout( () => {
+    scene.remove(point)
+    render()
+  },400)*/
+
+}
+
+//Esto un constructor para poder borrar los puntos creados
+function drawPoint(x,y,z){
+  const ico = new THREE.IcosahedronGeometry()
+  const material = new THREE.MeshBasicMaterial( {color: 0xd9d9d9} )
+  const point = new THREE.Mesh( ico, material );
+
+  scene.add(point)
+  point.position.set(x,y,z)
 }
