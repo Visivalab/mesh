@@ -50824,7 +50824,8 @@ function loadLayer(id,data){
   api_loader.setDRACOLoader(dracoLoader); // Carga elementos de aws que agarra de la base de datos
 
   api_loader.load(
-    data.url, 
+    //data.url, 
+    '/public/meshes/teatro_decimated.glb',
     function(glb){
       console.group('Loading layer');
       console.log("DB layer info: ", data);
@@ -50939,20 +50940,17 @@ function mouseClick(event){
   
   geometry.vertices.push( new Vector3(px, py, pz) );
   if(geometry.vertices.length === 3){
-    //const normal = new THREE.Vector3( 0, 0, 1 ); //optional
-    //const color = new THREE.Color( 0xffaa00 ); //optional
-    //const materialIndex = 0; //optional
+    const color = new Color("rgb(150,50,50)");
     const geometrymaterial = new MeshStandardMaterial( { 
-      color: 0x00cc00,
-      side: 2
+      color,
+      side: 2,
+      transparent: true,
+      opacity: 0.5
     } );
-    //geometrymaterial.side = THREE.DoubleSide
-    //geometrymaterial.shadowSide = THREE.DoubleSide
     geometry.faces = [
       new Face3( 0, 1, 2 )
     ];
-    //geometry.computeFaceNormals();
-    //geometry.computeVertexNormals();
+    geometry.computeFaceNormals();
     
     scene.add( new Mesh( geometry, geometrymaterial ) );
   }
@@ -50969,7 +50967,7 @@ function mouseClick(event){
 
 //Esto un constructor para poder borrar los puntos creados
 function drawPoint(x,y,z){
-  const ico = new IcosahedronGeometry();
+  const ico = new IcosahedronGeometry(0.3);
   const material = new MeshBasicMaterial( {color: 0xd9d9d9} );
   const point = new Mesh( ico, material );
 
