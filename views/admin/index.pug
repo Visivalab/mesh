@@ -3,12 +3,24 @@ html
     title= title
     meta(charset="utf-8")
     meta(name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0")
-    link(type="text/css" rel="stylesheet" href="../public/styles/main.css")
+    //link(type="text/css" rel="stylesheet" href="/public/styles/main.css")
+    link(type="text/css" rel="stylesheet" href="/bulma/css/bulma.css")
+    script(type="module" src="/public/js/admin.js")
   body
-    p= title
+    p.title= title
+    .block
+    p.subtitle.is-4 Proyectos  
+    table#projectTable.table
+      thead
+        td Nombre
+        td ID
+        td
+      tbody
+
+    .block
     ul
-        li Bootstrap tonto para las 4 cosas que hay aquí
-        li Poder subir una mesh
-        li Añadir/quitar capas con X meshes
-        li Borrar una mesh
-        li Cambiar el nombre de las capas
+        li ✅ Bulma para las 4 cosas que hay aquí
+        li ✅ Lista de proyectos con link para ir mas rapido
+        li Crear un proyecto
+        li Subir una mesh
+        li Añadir/Quitar meshes a proyectos

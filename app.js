@@ -24,6 +24,7 @@ app.set('view engine', 'pug')
 //app.use(cors())
 app.use('/public', express.static('public'))
 app.use('/draco', express.static('node_modules/three/examples/js/libs/draco/gltf')) // Los decoders de draco se tienen que cojer directamente del módulo de three 🤷🏻‍♂️
+app.use('/bulma', express.static('node_modules/bulma'))
 
 // Definir rutas (Poner en otro lado)
 const meshController = require('./controllers/meshController')
@@ -36,7 +37,7 @@ app.get('/admin', (req, res) => {
   res.render('admin/index', { title:'Admin Page' })
 })
 //app.post('/api/upload', meshController.upload)
-//app.get('/api/projects', projectController.allProjects)
+app.get('/api/projects', projectController.allProjects)
 app.get('/api/project/:id', projectController.project)
 //app.get('/api/mesh', meshController.getMesh)
 
