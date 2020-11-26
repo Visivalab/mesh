@@ -1,4 +1,5 @@
 import * as THREE from 'three'; // https://threejs.org/docs/#api/en/loaders/Loader
+import earcut from 'earcut';
 
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -225,23 +226,59 @@ function render() {
 }
 
 
+/* DIBUJAR POLIGONOS */
 
+const intersections = (x,y) => {
+  mouse.x = (x / renderer.domElement.clientWidth ) * 2 - 1
+  mouse.y = - ( y / renderer.domElement.clientHeight ) * 2 + 1
+  raycaster.setFromCamera( mouse, camera )
 
-const geometry = new THREE.Geometry();
+  return raycaster.intersectObjects(scene.children, true)
+}
+
+let geometryVertices = []
+let earcutVertices = []
 
 function mouseClick(event){
   
-  mouse.x = ( event.clientX / renderer.domElement.clientWidth ) * 2 - 1
-  mouse.y = - ( event.clientY / renderer.domElement.clientHeight ) * 2 + 1
-  raycaster.setFromCamera( mouse, camera )
-
-  let intersects = raycaster.intersectObjects(scene.children, true)
+  const intersects = intersections(event.clientX, event.clientY)
   let [px,py,pz] = [intersects[0].point.x, intersects[0].point.y, intersects[0].point.z]
-
   drawPoint(px, py, pz)
   
-  geometry.vertices.push( new THREE.Vector3(px, py, pz) )
-  if(geometry.vertices.length === 3){
+  let geometry = new THREE.Geometry()
+  let faces = []
+
+  geometryVertices.push( new THREE.Vector3(px, py, pz) )
+  earcutVertices = earcutVertices.concat( [px, py, pz] ) // Concatenamos porque earcut quiere esto : earcut([10,0,1, 0,50,2, 60,60,3, 70,10,4])
+
+  if(earcutVertices.length >= 9){
+    console.log("Draw Faces")
+
+    console.log("Vertices", earcutVertices)
+
+    //Pasar los puntos a earcut
+    let triangleVertexs = earcut(earcutVertices,null,3)
+    
+    //Esto retorna un array con los puntos de los triangulos [1,0,3, 3,2,1], que podemos usar para Face3
+    //Como a face3 se le pasan 3 puntos y dibuja la cara, tendria que dividir este array de triangles de 3 en 3 para irlo pasando a faces
+    console.log("Triangles:", triangleVertexs)
+
+    // Hay que hacer un bucle para que dibuje cada cara    
+    // Por cada 3 triangulos hay que dibujar una cara
+    for(let i=0; i<triangleVertexs.length; i+=3){
+
+      console.log(triangleVertexs[i], triangleVertexs[i+1], triangleVertexs[i+2])
+      faces.push( new THREE.Face3( triangleVertexs[i], triangleVertexs[i+1], triangleVertexs[i+2] ) )
+
+    }
+    
+    geometry.vertices = geometryVertices
+    geometry.faces = faces
+    console.log(geometry.faces)
+    geometry.computeFaceNormals();
+    
+
+
     const color = new THREE.Color("rgb(150,50,50)")
     const geometrymaterial = new THREE.MeshStandardMaterial( { 
       color,
@@ -249,21 +286,10 @@ function mouseClick(event){
       transparent: true,
       opacity: 0.5
     } );
-    geometry.faces = [
-      new THREE.Face3( 0, 1, 2 )
-    ]
-    geometry.computeFaceNormals();
     
     scene.add( new THREE.Mesh( geometry, geometrymaterial ) );
   }
   render()
-
-  console.log(intersects)
-  
-  /*setTimeout( () => {
-    scene.remove(point)
-    render()
-  },400)*/
 
 }
 
