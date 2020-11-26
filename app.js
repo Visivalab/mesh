@@ -1,3 +1,5 @@
+require('dotenv').config()
+
 const express = require('express') // https://expressjs.com/es/4x/api.html#res.render
 const mongoose = require('mongoose') // https://mongoosejs.com/docs/guide.html
 const cors = require('cors')
@@ -6,10 +8,11 @@ const app = express()
 const port = 3000
 
 // Conexión a la base de datos (mongodb 🤼‍♂️)
-mongoose.connect('mongodb+srv://visivalab:japt5noop@COOD3dest@main.p4nnd.mongodb.net/database?retryWrites=true&w=majority', {
+mongoose.connect(process.env.MONGODB, {
     useNewUrlParser: true,
     useUnifiedTopology: true
 })
+
 const db = mongoose.connection;
 db.on('error', console.error.bind(console, 'connection error:'));
 db.once('open', function() {
