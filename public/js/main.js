@@ -3,7 +3,6 @@ import earcut from 'earcut';
 
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-//import { GUI } from 'three/examples/jsm/libs/dat.gui.module.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader';
 
 let renderer, scene, camera, controls, ambientLight;
@@ -19,9 +18,9 @@ function createGui() {
   gui = document.createElement('div')
   gui.className = 'gui';
   document.querySelector('body').appendChild(gui)
-  let defaultOptions = createGuiGroup('defaultOptions','')
-  let layers = createGuiGroup('layers','')
-  let separator = createGuiSeparator()
+  let defaultOptions = createGuiGroup('defaultOptions')
+  let layers = createGuiGroup('layers','Layers',true,true)
+  let polygons = createGuiGroup('polygons','Polygons',true,true)
 
   let enableAll = createGuiElement('enableAll','Enable all', function(){
     camera.layers.enableAll()
@@ -37,25 +36,50 @@ function createGui() {
   defaultOptions.appendChild(disableAll)
 
   gui.appendChild(layers)
-  gui.appendChild(separator)
+  gui.appendChild(createGuiSeparator('space'))
+  gui.appendChild(polygons)
+  gui.appendChild(createGuiSeparator('line'))
   gui.appendChild(defaultOptions)
   
 }
 
-function createGuiSeparator(){
+function createGuiSeparator(type){
   let separator = document.createElement('div')
-  separator.className = 'gui__separator'
-  
+  if(type == 'line'){
+    separator.className = 'gui__separator gui__separator--line'
+  }else if(type == 'space'){
+    separator.className = 'gui__separator gui__separator--space'
+  }
   return separator
 }
 
-function createGuiGroup(id,text,callback = null){
+function createGuiGroup(id,text = null, dropdownMode = false, opened = true /*,callback = null*/){
   let group = document.createElement('div')
   group.className = 'gui__group'
   group.id = id
-  group.textContent = text
+  if(text){
+    let groupTitle = document.createElement('div')
+    groupTitle.className = 'gui__group__title'
+    groupTitle.textContent = text
+    
+    if(dropdownMode){
+      groupTitle.addEventListener('click', () => toggleGroup(group) )
+      group.classList.add('gui__group--dropdown')
+    }
+    
+    group.appendChild(groupTitle)
+  }
+  function toggleGroup(group){
+    group.classList.toggle('gui__group--active')
+    console.log(group)
+  }
+  if(opened) toggleGroup(group)
 
-  group.addEventListener('click', callback)
+  let groupContent = document.createElement('div')
+  groupContent.className = 'gui__group__content'
+  group.appendChild(groupContent)
+
+  //group.addEventListener('click', callback)
 
   return group
 }
@@ -179,7 +203,7 @@ function loadMeshes(){
         camera.layers.toggle( i )
         render()
       })
-      document.querySelector('.gui #layers').appendChild(guiLayer)
+      document.querySelector('.gui #layers .gui__group__content').appendChild(guiLayer)
 
       loadLayer(i,meshes[i])
 
@@ -238,46 +262,35 @@ const intersections = (x,y) => {
 
 let geometryVertices = []
 let earcutVertices = []
+let polygon
 
 function mouseClick(event){
   
   const intersects = intersections(event.clientX, event.clientY)
   let [px,py,pz] = [intersects[0].point.x, intersects[0].point.y, intersects[0].point.z]
   drawPoint(px, py, pz)
-  
+
+  scene.remove(polygon)
+
   let geometry = new THREE.Geometry()
   let faces = []
 
   geometryVertices.push( new THREE.Vector3(px, py, pz) )
   earcutVertices = earcutVertices.concat( [px, py, pz] ) // Concatenamos porque earcut quiere esto : earcut([10,0,1, 0,50,2, 60,60,3, 70,10,4])
 
-  if(earcutVertices.length >= 9){
-    console.log("Draw Faces")
+  if(geometryVertices.length >= 3){
 
-    console.log("Vertices", earcutVertices)
+    let triangleVertexs = earcut(earcutVertices,null,3) // earcut retorna un array con los indices de los vertices de cada triangulo - [1,0,3, 3,2,1] -
 
-    //Pasar los puntos a earcut
-    let triangleVertexs = earcut(earcutVertices,null,3)
-    
-    //Esto retorna un array con los puntos de los triangulos [1,0,3, 3,2,1], que podemos usar para Face3
-    //Como a face3 se le pasan 3 puntos y dibuja la cara, tendria que dividir este array de triangles de 3 en 3 para irlo pasando a faces
-    console.log("Triangles:", triangleVertexs)
-
-    // Hay que hacer un bucle para que dibuje cada cara    
-    // Por cada 3 triangulos hay que dibujar una cara
-    for(let i=0; i<triangleVertexs.length; i+=3){
-
-      console.log(triangleVertexs[i], triangleVertexs[i+1], triangleVertexs[i+2])
+    for(let i=0; i<triangleVertexs.length; i+=3){ // Por cada 3 vertices hay crear una cara
       faces.push( new THREE.Face3( triangleVertexs[i], triangleVertexs[i+1], triangleVertexs[i+2] ) )
-
     }
-    
+
     geometry.vertices = geometryVertices
     geometry.faces = faces
-    console.log(geometry.faces)
+    
     geometry.computeFaceNormals();
     
-
 
     const color = new THREE.Color("rgb(150,50,50)")
     const geometrymaterial = new THREE.MeshStandardMaterial( { 
@@ -286,8 +299,9 @@ function mouseClick(event){
       transparent: true,
       opacity: 0.5
     } );
-    
-    scene.add( new THREE.Mesh( geometry, geometrymaterial ) );
+
+    polygon = new THREE.Mesh( geometry, geometrymaterial )
+    scene.add( polygon );
   }
   render()
 

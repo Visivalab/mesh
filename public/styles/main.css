@@ -15,6 +15,11 @@ html,body{
   background-color: white;
   box-shadow: 0px 0px 10px 0px rgba(0,0,0,0.1);
 
+  font-family: 'Raleway';
+  font-weight: 300;
+  font-size: 1rem;
+  color: rgb(34, 34, 34);
+
   --gray: #dbdbdb4d;
   --sides_spacing: 20px;
 }
@@ -24,14 +29,34 @@ html,body{
   box-sizing: border-box;
   height: 2px;
   border-radius: 1px;
+}
+.gui__separator.gui__separator--line{
   background-color: var(--gray);
+}
+.gui__separator.gui__separator--space{
+  
+}
+.gui__group__content{
+  display: none;
+  flex-direction: column;
+}
+.gui__group.gui__group--active .gui__group__content{
+  display: flex;
+}
+.gui__group--dropdown.gui__group--active .gui__group__title{
+  background: url('./icons/arrow_up.svg') no-repeat center right var(--sides_spacing)/10px
+}
+.gui__group--dropdown .gui__group__title{
+  background: url('./icons/arrow_down.svg') no-repeat center right var(--sides_spacing)/10px
+}
+.gui__group__title{
+  display: flex;
+  font-weight: 600;
+  padding: 10px var(--sides_spacing);
+  box-sizing: border-box;
 }
 .gui__element{
   display: flex;
-  font-family: 'Raleway';
-  font-weight: 300;
-  font-size: 1rem;
-  color: rgb(34, 34, 34);
   padding: 10px var(--sides_spacing);
   box-sizing: border-box;
   cursor: pointer;
