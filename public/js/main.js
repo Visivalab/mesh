@@ -1,103 +1,20 @@
 import * as THREE from 'three'; // https://threejs.org/docs/#api/en/loaders/Loader
 import earcut from 'earcut';
+import {GUI} from './gui';
 
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader';
 
 let renderer, scene, camera, controls, ambientLight;
-let container, gui;
+let container, mainGui;
 let mesh;
 
 const raycaster = new THREE.Raycaster()
 const mouse = new THREE.Vector2()
 
+
 init();
-
-function createGui() {
-  gui = document.createElement('div')
-  gui.className = 'gui';
-  document.querySelector('body').appendChild(gui)
-  let defaultOptions = createGuiGroup('defaultOptions')
-  let layers = createGuiGroup('layers','Layers',true,true)
-  let polygons = createGuiGroup('polygons','Polygons',true,true)
-
-  let enableAll = createGuiElement('enableAll','Enable all', function(){
-    camera.layers.enableAll()
-    render()
-  })
-
-  let disableAll = createGuiElement('disableAll','Disable all', function(){
-    camera.layers.disableAll()
-    render()
-  })
-  
-  defaultOptions.appendChild(enableAll)
-  defaultOptions.appendChild(disableAll)
-
-  gui.appendChild(layers)
-  gui.appendChild(createGuiSeparator('space'))
-  gui.appendChild(polygons)
-  gui.appendChild(createGuiSeparator('line'))
-  gui.appendChild(defaultOptions)
-  
-}
-
-function createGuiSeparator(type){
-  let separator = document.createElement('div')
-  if(type == 'line'){
-    separator.className = 'gui__separator gui__separator--line'
-  }else if(type == 'space'){
-    separator.className = 'gui__separator gui__separator--space'
-  }
-  return separator
-}
-
-function createGuiGroup(id,text = null, dropdownMode = false, opened = true /*,callback = null*/){
-  let group = document.createElement('div')
-  group.className = 'gui__group'
-  group.id = id
-  if(text){
-    let groupTitle = document.createElement('div')
-    groupTitle.className = 'gui__group__title'
-    groupTitle.textContent = text
-    
-    if(dropdownMode){
-      groupTitle.addEventListener('click', () => toggleGroup(group) )
-      group.classList.add('gui__group--dropdown')
-    }
-    
-    group.appendChild(groupTitle)
-  }
-  function toggleGroup(group){
-    group.classList.toggle('gui__group--active')
-    console.log(group)
-  }
-  if(opened) toggleGroup(group)
-
-  let groupContent = document.createElement('div')
-  groupContent.className = 'gui__group__content'
-  group.appendChild(groupContent)
-
-  //group.addEventListener('click', callback)
-
-  return group
-}
-
-function createGuiElement(id,name,callback = null){
-  let layer = document.createElement('div')
-  layer.className = 'gui__element'
-  layer.id = id
-  layer.textContent = name
-  
-  let info = document.createElement('div')
-  info.className = 'gui__element__info'
-  layer.appendChild(info)
-
-  layer.addEventListener('click', callback)
-
-  return layer
-}
 
 function createCamera(){
     
@@ -139,6 +56,39 @@ function createRenderer(){
   renderer.outputEncoding = THREE.sRGBEncoding;
 
   container.appendChild( renderer.domElement );
+
+}
+
+function createGui(){
+
+  mainGui = GUI.create()
+
+  let defaultOptions = GUI.createGroup('defaultOptions')
+  let layers = GUI.createGroup('layers','Layers',true,true)
+  let polygons = GUI.createGroup('polygons','Polygons',true,true)
+  let addPolygonsButton = GUI.createButton( '/public/styles/icons/plus_cross.svg','gui__button--rounded', (e) => {
+    e.stopPropagation()
+    console.log("inicia creacion de elementos")
+  })
+  
+  GUI.add( GUI.createLayer('enableAll','Enable all', function(){
+    camera.layers.enableAll()
+    render()
+  }), defaultOptions)
+
+  GUI.add( GUI.createLayer('disableAll','Disable all', function(){
+    camera.layers.disableAll()
+    render()
+  }), defaultOptions)
+
+  GUI.add(layers, mainGui)
+  GUI.add(GUI.createSeparator('space'), mainGui)
+  GUI.add(addPolygonsButton, polygons)
+  GUI.add(polygons, mainGui)
+  GUI.add(GUI.createSeparator('line'), mainGui)
+  GUI.add(defaultOptions, mainGui)
+
+  document.querySelector('body').appendChild( mainGui );
 
 }
 
@@ -199,12 +149,13 @@ function loadMeshes(){
 
     for(let i=0; i<meshes.length; i++){ // En un for normal porque los layers deben tener numeros del 0 al 31 - https://threejs.org/docs/#api/en/core/Layers
 
-      let guiLayer = createGuiElement(`layer_${i}`, meshes[i].name, function(){
+      let guiLayer = GUI.createLayer(`layer_${i}`, meshes[i].name, function(){
         camera.layers.toggle( i )
         render()
       })
-      document.querySelector('.gui #layers .gui__group__content').appendChild(guiLayer)
 
+      GUI.add(guiLayer,layers)
+      
       loadLayer(i,meshes[i])
 
     }
@@ -225,9 +176,8 @@ function init() {
   createCamera();
   createLights();
   createRenderer();
-  createGui();
   setControls();
-
+  createGui()
   loadMeshes();
 
   render();
@@ -268,7 +218,10 @@ function mouseClick(event){
   
   const intersects = intersections(event.clientX, event.clientY)
   let [px,py,pz] = [intersects[0].point.x, intersects[0].point.y, intersects[0].point.z]
-  drawPoint(px, py, pz)
+  
+  let point = drawPoint()
+  scene.add(point)
+  point.position.set(px, py, pz)
 
   scene.remove(polygon)
 
@@ -307,12 +260,10 @@ function mouseClick(event){
 
 }
 
-//Esto un constructor para poder borrar los puntos creados
 function drawPoint(x,y,z){
   const ico = new THREE.IcosahedronGeometry(0.3)
   const material = new THREE.MeshBasicMaterial( {color: 0xd9d9d9} )
   const point = new THREE.Mesh( ico, material );
 
-  scene.add(point)
-  point.position.set(x,y,z)
+  return point
 }
