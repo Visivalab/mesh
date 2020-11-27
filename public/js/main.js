@@ -102,7 +102,7 @@ function createGuiElement(id,name,callback = null){
 function createCamera(){
     
   camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 10000 );
-  camera.position.set( - 100, 100, 100 );
+  camera.position.set( - 40, 40, 40 );
   
   camera.layers.enable( 0 );
   scene.add( camera );

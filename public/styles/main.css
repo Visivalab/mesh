@@ -33,9 +33,6 @@ html,body{
 .gui__separator.gui__separator--line{
   background-color: var(--gray);
 }
-.gui__separator.gui__separator--space{
-  
-}
 .gui__group__content{
   display: none;
   flex-direction: column;
