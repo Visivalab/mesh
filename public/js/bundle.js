@@ -51556,6 +51556,9 @@ function createGui(){
   GUI.add(layers, mainGui);
   GUI.add(GUI.createSeparator('space'), mainGui);
   GUI.add(addPolygonsButton, polygons);
+  GUI.add(GUI.createSeparator('line'), mainGui);
+  GUI.add(GUI.createSeparator('line'), mainGui);
+  GUI.add(GUI.createSeparator('line'), mainGui);
   GUI.add(polygons, mainGui);
   GUI.add(GUI.createSeparator('line'), mainGui);
   GUI.add(defaultOptions, mainGui);
