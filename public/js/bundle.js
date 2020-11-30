@@ -45816,7 +45816,7 @@ Modal.prototype.createBackground = function(){
 
 Modal.prototype.write = function(text){
   let modalText = document.createElement('p');
-  modalText.textContent = text;
+  modalText.innerHTML = text;
   document.querySelector(`#${this.id} .modal__content`).appendChild(modalText);
 };
 
@@ -51607,6 +51607,7 @@ function init() {
   container = document.querySelector('#viewer');
   
   container.addEventListener('click', mouseClick, false);
+  container.addEventListener('keypress', keyPress);
 
 
   //Crear la escena con su background bien bonito
@@ -51641,11 +51642,19 @@ function createGui(){
       background: true
     });
     modalNewPolygon.mount();
-    modalNewPolygon.write('COooooosa');
+    modalNewPolygon.write('<strong>Pulsa el ratón</strong> para crear el polígono.<br>Cuando termines, <strong>pulsa enter</strong>.');
     modalNewPolygon.addButton('Ok','green',function(){
       
       console.log("Empezar a dibujar");
-    
+      
+      /* Creo un objeto para el polígono?? 
+      Solo duraria el rato que se crea, luego las coordenadas
+      irian a la bbdd. 
+      Pero tambien, cuando hay polígonos, se deberian cargar todos*/
+      //let polygon = new Polygon({})
+      drawing = true;
+
+      modalNewPolygon.close();
     
     });
     modalNewPolygon.addButton('Cancel','red',function(){
@@ -51747,6 +51756,7 @@ function loadMeshes(){
 
 
 /* DIBUJAR POLIGONOS */
+let drawing = false;
 
 const intersections = (x,y) => {
   mouse.x = (x / renderer.domElement.clientWidth ) * 2 - 1;
@@ -51761,7 +51771,8 @@ let earcutVertices = [];
 let polygon;
 
 function mouseClick(event){
-  
+  if(drawing === false) return
+
   const intersects = intersections(event.clientX, event.clientY);
   let [px,py,pz] = [intersects[0].point.x, intersects[0].point.y, intersects[0].point.z];
   
@@ -51812,4 +51823,27 @@ function drawPoint(x,y,z){
   const point = new Mesh( ico, material );
 
   return point
+}
+
+function keyPress(e){
+  if(drawing === false) return
+  
+  if(e.key === "Enter"){
+    drawing = false;
+    console.log("End polygon");
+    let savePolygonModal = new Modal({
+      id:'savePolygon',
+      background: true
+    });
+    savePolygonModal.mount();
+    savePolygonModal.write('Polígono terminado');
+    savePolygonModal.addButton('Save','green',function(){
+      console.log("Guardar y subir polígono");
+      savePolygonModal.close();
+    });
+    savePolygonModal.addButton('Cancel','red',function(){
+      console.log("Nada, cancelar todo");
+      savePolygonModal.close();
+    });
+  }
 }

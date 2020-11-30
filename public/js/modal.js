@@ -39,7 +39,7 @@ Modal.prototype.createBackground = function(){
 
 Modal.prototype.write = function(text){
   let modalText = document.createElement('p')
-  modalText.textContent = text
+  modalText.innerHTML = text
   document.querySelector(`#${this.id} .modal__content`).appendChild(modalText)
 }
 
