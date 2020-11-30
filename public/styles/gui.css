@@ -14,8 +14,6 @@
   font-size: 1rem;
   color: rgb(34, 34, 34);
 
-  --gray: #dbdbdb4d;
-  --black: #272727;
   --sides_spacing: 20px;
 }
 .gui__separator{

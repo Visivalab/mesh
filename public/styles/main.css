@@ -2,3 +2,46 @@ html,body{
     margin:0;
     font-size:14px
 }
+
+:root{
+  --steam: #bfc1c4;
+  --gray: #dbdbdb4d;
+  --black: #272727;
+
+  --green: #91d197;
+  --red: #f0a1a1;
+}
+
+/* Helpers */
+.button{
+  background-color: var(--steam);
+}
+.button--green{
+  background-color: var(--green);
+}
+.button--red{
+  background-color: var(--red);
+}
+
+.modal{
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%,-50%);
+  min-width: 100px;
+  min-height: 100px;
+  background-color: white;
+  border-radius: 15px;
+  display: flex;
+  flex-direction: column;
+  z-index: 2;
+}
+.modal__background{
+  z-index: 1;
+  position: fixed;
+  width: 100vw;
+  height: 100vh;
+  top: 0;
+  background-color: var(--black);
+  opacity: 0.6;
+}

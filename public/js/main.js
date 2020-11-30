@@ -1,6 +1,7 @@
 import * as THREE from 'three'; // https://threejs.org/docs/#api/en/loaders/Loader
 import earcut from 'earcut';
 import {GUI} from './gui';
+import {Modal} from './modal'
 
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -12,7 +13,6 @@ let mesh;
 
 const raycaster = new THREE.Raycaster()
 const mouse = new THREE.Vector2()
-
 
 init();
 
@@ -59,6 +59,44 @@ function createRenderer(){
 
 }
 
+function onWindowResize() {
+  renderer.setSize( window.innerWidth, window.innerHeight ); // Actualiza el tamaño del visor
+
+  // Actualiza el tamaño de la camara, sino los elementos se estiran y se chafan
+  camera.aspect = window.innerWidth / window.innerHeight; 
+  camera.updateProjectionMatrix();
+
+  render();
+}
+
+function render() {
+  renderer.render( scene, camera );
+}
+
+function init() {
+
+  container = document.querySelector('#viewer')
+  
+  container.addEventListener('click', mouseClick, false)
+
+
+  //Crear la escena con su background bien bonito
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color( 0xbfe3dd );
+
+  createCamera();
+  createLights();
+  createRenderer();
+  setControls();
+  createGui()
+  loadMeshes();
+
+  render();
+  
+  window.addEventListener( 'resize', onWindowResize, false );
+}
+
+/* CREAR ELEMENTO INTERFAZ */
 function createGui(){
 
   mainGui = GUI.create()
@@ -66,9 +104,24 @@ function createGui(){
   let defaultOptions = GUI.createGroup('defaultOptions')
   let layers = GUI.createGroup('layers','Layers',true,true)
   let polygons = GUI.createGroup('polygons','Polygons',true,true)
-  let addPolygonsButton = GUI.createButton( '/public/styles/icons/plus_cross.svg','gui__button--rounded', (e) => {
+  let addPolygonsButton = GUI.createButton( '/public/styles/icons/plus_cross.svg','gui__button--rounded', function(e){
     e.stopPropagation()
-    console.log("inicia creacion de elementos")
+    
+    let modalNewPolygon = new Modal({
+      id: 'modall',
+      background: true
+    })
+    modalNewPolygon.mount()
+    modalNewPolygon.write('COooooosa')
+    modalNewPolygon.addButton('Ok','green',function(){
+      
+      console.log("Empezar a dibujar")
+    
+    
+    })
+    modalNewPolygon.addButton('Cancel','red',function(){
+      modalNewPolygon.close()
+    })
   })
   
   GUI.add( GUI.createLayer('enableAll','Enable all', function(){
@@ -92,6 +145,7 @@ function createGui(){
 
 }
 
+/* CARGAR MESH */
 function loadLayer(id,data){
   const api_loader = new GLTFLoader();
   
@@ -160,43 +214,6 @@ function loadMeshes(){
 
     }
   })
-}
-
-function init() {
-
-  container = document.querySelector('#viewer')
-  
-  container.addEventListener('click', mouseClick, false)
-
-
-  //Crear la escena con su background bien bonito
-  scene = new THREE.Scene();
-  scene.background = new THREE.Color( 0xbfe3dd );
-
-  createCamera();
-  createLights();
-  createRenderer();
-  setControls();
-  createGui()
-  loadMeshes();
-
-  render();
-  
-  window.addEventListener( 'resize', onWindowResize, false );
-}
-
-function onWindowResize() {
-  renderer.setSize( window.innerWidth, window.innerHeight ); // Actualiza el tamaño del visor
-
-  // Actualiza el tamaño de la camara, sino los elementos se estiran y se chafan
-  camera.aspect = window.innerWidth / window.innerHeight; 
-  camera.updateProjectionMatrix();
-
-  render();
-}
-
-function render() {
-  renderer.render( scene, camera );
 }
 
 

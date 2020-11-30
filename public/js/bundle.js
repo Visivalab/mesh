@@ -45776,6 +45776,64 @@ const GUI = (function(){
   }
 })();
 
+function Modal(options){
+  this.background = options.background || false;
+  this.place = options.place || 'body';
+  this.id = options.id || null;
+}
+
+/* Habria alguna manera de poder hacer todo esto
+pero sin linkar las cosas a una clase o id concreto?
+Seria necesario en algun contexto? */
+
+Modal.prototype.mount = function(){
+
+  if(!this.id){
+    console.error('Al crear la modal hay que pasar ID');
+    return
+  }
+  let modalElement = document.createElement('div');
+  modalElement.className = 'modal';
+  modalElement.id = this.id;
+  let modalContent = document.createElement('div');
+  modalContent.className = 'modal__content';
+  let modalbuttons = document.createElement('div');
+  modalbuttons.className = 'modal__buttons';
+
+  modalElement.appendChild(modalContent);
+  modalElement.appendChild(modalbuttons);
+
+  if(this.background === true) this.createBackground();
+
+  document.querySelector(this.place).appendChild(modalElement);
+};
+
+Modal.prototype.createBackground = function(){
+  let backgroundElement = document.createElement('div');
+  backgroundElement.className = 'modal__background';
+  document.querySelector(this.place).appendChild(backgroundElement);
+};
+
+Modal.prototype.write = function(text){
+  let modalText = document.createElement('p');
+  modalText.textContent = text;
+  document.querySelector(`#${this.id} .modal__content`).appendChild(modalText);
+};
+
+Modal.prototype.addButton = function(text,color,callback){
+  let buttonElement = document.createElement('div');
+  buttonElement.className = `button button--${color}`;
+  buttonElement.textContent = text;
+  buttonElement.addEventListener('click', callback);
+
+  document.querySelector(`#${this.id} .modal__buttons`).appendChild(buttonElement);
+};
+
+Modal.prototype.close = function(){
+  document.querySelector(`#${this.id}`).remove();
+  if(this.background) document.querySelector('.modal__background').remove();
+};
+
 // This set of controls performs orbiting, dollying (zooming), and panning.
 // Unlike TrackballControls, it maintains the "up" direction object.up (+Y by default).
 //
@@ -51485,7 +51543,6 @@ let mesh;
 const raycaster = new Raycaster();
 const mouse = new Vector2();
 
-
 init();
 
 function createCamera(){
@@ -51531,6 +51588,44 @@ function createRenderer(){
 
 }
 
+function onWindowResize() {
+  renderer.setSize( window.innerWidth, window.innerHeight ); // Actualiza el tamaño del visor
+
+  // Actualiza el tamaño de la camara, sino los elementos se estiran y se chafan
+  camera.aspect = window.innerWidth / window.innerHeight; 
+  camera.updateProjectionMatrix();
+
+  render();
+}
+
+function render() {
+  renderer.render( scene, camera );
+}
+
+function init() {
+
+  container = document.querySelector('#viewer');
+  
+  container.addEventListener('click', mouseClick, false);
+
+
+  //Crear la escena con su background bien bonito
+  scene = new Scene();
+  scene.background = new Color( 0xbfe3dd );
+
+  createCamera();
+  createLights();
+  createRenderer();
+  setControls();
+  createGui();
+  loadMeshes();
+
+  render();
+  
+  window.addEventListener( 'resize', onWindowResize, false );
+}
+
+/* CREAR ELEMENTO INTERFAZ */
 function createGui(){
 
   mainGui = GUI.create();
@@ -51538,9 +51633,24 @@ function createGui(){
   let defaultOptions = GUI.createGroup('defaultOptions');
   let layers = GUI.createGroup('layers','Layers',true,true);
   let polygons = GUI.createGroup('polygons','Polygons',true,true);
-  let addPolygonsButton = GUI.createButton( '/public/styles/icons/plus_cross.svg','gui__button--rounded', (e) => {
+  let addPolygonsButton = GUI.createButton( '/public/styles/icons/plus_cross.svg','gui__button--rounded', function(e){
     e.stopPropagation();
-    console.log("inicia creacion de elementos");
+    
+    let modalNewPolygon = new Modal({
+      id: 'modall',
+      background: true
+    });
+    modalNewPolygon.mount();
+    modalNewPolygon.write('COooooosa');
+    modalNewPolygon.addButton('Ok','green',function(){
+      
+      console.log("Empezar a dibujar");
+    
+    
+    });
+    modalNewPolygon.addButton('Cancel','red',function(){
+      modalNewPolygon.close();
+    });
   });
   
   GUI.add( GUI.createLayer('enableAll','Enable all', function(){
@@ -51556,9 +51666,6 @@ function createGui(){
   GUI.add(layers, mainGui);
   GUI.add(GUI.createSeparator('space'), mainGui);
   GUI.add(addPolygonsButton, polygons);
-  GUI.add(GUI.createSeparator('line'), mainGui);
-  GUI.add(GUI.createSeparator('line'), mainGui);
-  GUI.add(GUI.createSeparator('line'), mainGui);
   GUI.add(polygons, mainGui);
   GUI.add(GUI.createSeparator('line'), mainGui);
   GUI.add(defaultOptions, mainGui);
@@ -51567,6 +51674,7 @@ function createGui(){
 
 }
 
+/* CARGAR MESH */
 function loadLayer(id,data){
   const api_loader = new GLTFLoader();
   
@@ -51635,43 +51743,6 @@ function loadMeshes(){
 
     }
   });
-}
-
-function init() {
-
-  container = document.querySelector('#viewer');
-  
-  container.addEventListener('click', mouseClick, false);
-
-
-  //Crear la escena con su background bien bonito
-  scene = new Scene();
-  scene.background = new Color( 0xbfe3dd );
-
-  createCamera();
-  createLights();
-  createRenderer();
-  setControls();
-  createGui();
-  loadMeshes();
-
-  render();
-  
-  window.addEventListener( 'resize', onWindowResize, false );
-}
-
-function onWindowResize() {
-  renderer.setSize( window.innerWidth, window.innerHeight ); // Actualiza el tamaño del visor
-
-  // Actualiza el tamaño de la camara, sino los elementos se estiran y se chafan
-  camera.aspect = window.innerWidth / window.innerHeight; 
-  camera.updateProjectionMatrix();
-
-  render();
-}
-
-function render() {
-  renderer.render( scene, camera );
 }
 
 
