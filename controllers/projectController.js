@@ -7,7 +7,7 @@ exports.allProjects = function(req,res){
   .populate('polygons')
   .exec(function(err,finded){
     if(err) console.log(err)
-    console.log(finded)
+    //console.log(finded)
     res.json(finded)
   })
 }
@@ -20,7 +20,7 @@ exports.project = function(req,res){
   .populate('polygons')
   .exec(function(err,finded){
     if(err) console.log(err)
-    console.log(finded)
+    //console.log(finded)
     res.json(finded)
   })
 }

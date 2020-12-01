@@ -51656,8 +51656,8 @@ function createGui(){
   mainGui = GUI.create();
 
   let defaultOptions = GUI.createGroup('defaultOptions');
-  let layers = GUI.createGroup('layers','Layers',true,true);
-  let polygons = GUI.createGroup('polygons','Polygons',true,true);
+  let layersGroup = GUI.createGroup('layers','Layers',true,true);
+  let polygonsGroup = GUI.createGroup('polygons','Polygons',true,true);
   let addPolygonsButton = GUI.createButton( '/public/styles/icons/plus_cross.svg','gui__button--rounded', function(e){
     e.stopPropagation();
     
@@ -51696,10 +51696,10 @@ function createGui(){
     render();
   }), defaultOptions);
 
-  GUI.add(layers, mainGui);
+  GUI.add(layersGroup, mainGui);
   GUI.add(GUI.createSeparator('space'), mainGui);
-  GUI.add(addPolygonsButton, polygons);
-  GUI.add(polygons, mainGui);
+  GUI.add(addPolygonsButton, polygonsGroup);
+  GUI.add(polygonsGroup, mainGui);
   GUI.add(GUI.createSeparator('line'), mainGui);
   GUI.add(defaultOptions, mainGui);
 
@@ -51763,36 +51763,39 @@ function loadProject(){
     let meshes = project.meshes;
     let polygons = project.polygons;
 
+    // Cargar las meshes de la base de datos
     for(let i=0; i<meshes.length; i++){ // En un for normal porque los layers deben tener numeros del 0 al 31 - https://threejs.org/docs/#api/en/core/Layers
 
       let guiLayer = GUI.createLayer(`layer_${i}`, meshes[i].name, function(){
         camera.layers.toggle( i );
         render();
       });
+      GUI.add(guiLayer,layersGroup); // 
 
-      GUI.add(guiLayer,layers);
-      
       loadLayer(i,meshes[i]);
     }
 
+    // Cargar los polígonos
     // Como puede haber muchos poligonos, voy a reservar las capas 30 y 31 para puntos y polígonos (son las últimas ocupables)
-    for( let polygon of polygons){
+    // O al ser poca carga, los puedo quitar y añadir de la escena en vez de apagarlos
+    for( let polygon of polygons ){
       console.log(polygon);
-      paintPolygon(polygon.points);
+
+      //Esto no seria createLayer.. quiza tengo que buscar un nombre que no líe, createElement
+      let guiLayer = GUI.createLayer(`polygon_${polygon.id}`, polygon.name, function(){
+        // Intentar no usar capas para esto, solo hay 32 layers como tal en three
+        console.log("Apagar este polygon");
+      });
+      GUI.add(guiLayer,polygonsGroup);
+
+      scene.add( generatePolygon(polygon.points) );
+
     }
   });
 }
 
 
-/* Hay que unificar el dibujo de los polígonos */
-
-
-
-
-
-
-
-function paintPolygon(vertices){ //vertices es un objeto con x, y, z
+function generatePolygon(vertices){ //vertices es { x, y, z }
   let faces = [];
   let geometry = new Geometry();
   let earcutVertices = [];
@@ -51821,9 +51824,11 @@ function paintPolygon(vertices){ //vertices es un objeto con x, y, z
     opacity: 0.5
   });
 
-  let loadedPolygon = new Mesh( geometry, geometrymaterial );
-  scene.add( loadedPolygon );
+  let createdPolygon = new Mesh( geometry, geometrymaterial );
+  return createdPolygon
+
 }
+
 
 
 
@@ -51837,60 +51842,39 @@ const intersections = (x,y) => {
 
   return raycaster.intersectObjects(scene.children, true)
 };
-let vertices = [];
 
+
+
+let newPolygonVertices = [];
+let newPolygons = []; // Para poderlos borrar cuadno se cancela, hay que guardar la instancia en algun lado
+let clickingPoints = []; // Para poderlos borrar cuando se cancela, hay que guardar la instancia en algun lado
+
+// !! Cambiar nombre de mouseClick y keyPress para que se sepa qué hacen
 function mouseClick(event){
   if(drawing === false) return
 
   const intersects = intersections(event.clientX, event.clientY);
   let [px,py,pz] = [intersects[0].point.x, intersects[0].point.y, intersects[0].point.z];
   
-  let point = drawPoint();
+  let point = createPoint();
+  clickingPoints.push(point);
   scene.add(point);
   point.position.set(px, py, pz);
 
-  vertices.push({x:px,y:py,z:pz});
-  //scene.remove(polygon)
+  newPolygonVertices.push({x:px,y:py,z:pz});
 
-  //geometryVertices.push( new THREE.Vector3(px, py, pz) )
-  //earcutVertices = earcutVertices.concat( [px, py, pz] ) // Concatenamos porque earcut quiere esto : earcut([10,0,1, 0,50,2, 60,60,3, 70,10,4])
-  
-  if(vertices.length >= 3){
-    
-    paintPolygon(vertices);
-    
-    /*
-    let faces = []
-    let geometry = new THREE.Geometry()
-    
-    let triangleVertexs = earcut(earcutVertices,null,3) // earcut retorna un array con los indices de los vertices de cada triangulo - [1,0,3, 3,2,1] -
+  if(newPolygonVertices.length >= 3){ 
+    let newPolygon = generatePolygon(newPolygonVertices);
+    newPolygons.push(newPolygon);   
 
-    for(let i=0; i<triangleVertexs.length; i+=3){ // Por cada 3 vertices hay crear una cara
-      faces.push( new THREE.Face3( triangleVertexs[i], triangleVertexs[i+1], triangleVertexs[i+2] ) )
-    }
-
-    geometry.vertices = geometryVertices
-    geometry.faces = faces
-    
-    geometry.computeFaceNormals();
-    
-    const color = new THREE.Color("rgb(150,50,50)")
-    const geometrymaterial = new THREE.MeshStandardMaterial( { 
-      color,
-      side: 2,
-      transparent: true,
-      opacity: 0.5
-    } );
-    */
-
-    //polygon = new THREE.Mesh( geometry, geometrymaterial )
-    //scene.add( polygon );
+    scene.add( newPolygon );
+    // !! Ver como No ir poniendo los polígonos uno encima de otro..
   }
   render();
 
 }
 
-function drawPoint(x,y,z){
+function createPoint(){
   const ico = new IcosahedronGeometry(0.3);
   const material = new MeshBasicMaterial( {color: 0xd9d9d9} );
   const point = new Mesh( ico, material );
@@ -51927,7 +51911,7 @@ function keyPress(e){
         method:'POST',
         body: JSON.stringify({
           project: pathProjectId,
-          points: vertices,
+          points: newPolygonVertices,
           name: document.querySelector('#polygonName').value,
           color: 'green'
         }),
@@ -51941,13 +51925,21 @@ function keyPress(e){
       })
       .catch( error => console.error(error) );
       
-      vertices = [];
-      //earcutVertices = []
+      newPolygonVertices = [];
       savePolygonModal.close();
     });
     savePolygonModal.addButton({text:'Cancel',color:'red',focus:false}, function(){
-      console.log("Nada, cancelar todo");
+
+      for(let point of clickingPoints) scene.remove(point);
+      for(let polygon of newPolygons) scene.remove(polygon);
+      
+      newPolygonVertices = [];
+      clickingPoints = [];
+      newPolygons = [];
+
       savePolygonModal.close();
+      
+      render();
     });
   }
 }
