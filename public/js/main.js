@@ -11,6 +11,8 @@ let renderer, scene, camera, controls, ambientLight;
 let container, mainGui;
 let mesh;
 
+let pathProjectId = window.location.pathname.split('/').pop()
+
 const raycaster = new THREE.Raycaster()
 const mouse = new THREE.Vector2()
 
@@ -199,7 +201,6 @@ function loadLayer(id,data){
 }
 
 function loadMeshes(){
-  let pathProjectId = window.location.pathname.split('/').pop()
   
   fetch('/api/project/'+pathProjectId)
   .then( response => {
@@ -310,6 +311,26 @@ function keyPress(e){
     savePolygonModal.write('Polígono terminado')
     savePolygonModal.addButton('Save','green',function(){
       console.log("Guardar y subir polígono")
+      fetch('/api/polygon/save',{
+        method:'POST',
+        body: JSON.stringify({
+          project: pathProjectId,
+          points: geometryVertices,
+          name: 'Base',
+          color: 'green'
+        }),
+        headers:{
+          'Content-Type': 'application/json'
+        }
+      })
+      .then( res => console.log(res.json()) )
+      .catch( error => console.error(error) )
+      .then( resp => {
+        console.log('Added',resp)
+      })
+
+      geometryVertices = []
+      earcutVertices = []
       savePolygonModal.close()
     })
     savePolygonModal.addButton('Cancel','red',function(){

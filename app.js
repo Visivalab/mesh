@@ -1,6 +1,7 @@
 require('dotenv').config()
 
 const express = require('express') // https://expressjs.com/es/4x/api.html#res.render
+const bodyParser = require('body-parser')
 const mongoose = require('mongoose') // https://mongoosejs.com/docs/guide.html
 const cors = require('cors')
 
@@ -32,6 +33,10 @@ app.use('/bulma', express.static('node_modules/bulma'))
 // Definir rutas (Poner en otro lado)
 const meshController = require('./controllers/meshController')
 const projectController = require('./controllers/projectController')
+const polygonController = require('./controllers/polygonController')
+
+let jsonParser = bodyParser.json()
+//let urlencodedParser = bodyParser.urlencoded({ extended: false })
 
 app.get('/view/:id', (req, res) => {
   res.render('index', { title:'Mesh view' })
@@ -43,7 +48,8 @@ app.get('/admin', (req, res) => {
 app.get('/api/projects', projectController.allProjects)
 app.get('/api/project/:id', projectController.project)
 //app.get('/api/mesh', meshController.getMesh)
-
+app.post('/api/polygon/save', jsonParser, polygonController.savePolygon)
+//app.get('/api/polygon/:id', polygonController.getPolygon) // Coje un poligono concreto mediante su id
 app.listen(port, () => {
   console.log(`App en marcha -> http://localhost:${port}`)
 })
