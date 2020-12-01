@@ -92,7 +92,7 @@ function init() {
   createRenderer();
   setControls();
   createGui()
-  loadMeshes();
+  loadProject();
 
   render();
   
@@ -200,7 +200,7 @@ function loadLayer(id,data){
 
 }
 
-function loadMeshes(){
+function loadProject(){
   
   fetch('/api/project/'+pathProjectId)
   .then( response => {
@@ -210,6 +210,7 @@ function loadMeshes(){
     console.log(`Project: ${project._id}`, project)
     
     let meshes = project.meshes;
+    let polygons = project.polygons;
 
     for(let i=0; i<meshes.length; i++){ // En un for normal porque los layers deben tener numeros del 0 al 31 - https://threejs.org/docs/#api/en/core/Layers
 
@@ -221,10 +222,58 @@ function loadMeshes(){
       GUI.add(guiLayer,layers)
       
       loadLayer(i,meshes[i])
+    }
 
+    // Como puede haber muchos poligonos, voy a reservar las capas 30 y 31 para puntos y polígonos (son las últimas ocupables)
+    for( let polygon of polygons){
+      console.log(polygon)
+      paintPolygon(polygon.points)
     }
   })
 }
+
+
+/* Hay que unificar el dibujo de los polígonos */
+
+
+
+
+
+
+
+function paintPolygon(vertices){ //vertices es un objeto con x, y, z
+  let faces = []
+  let geometry = new THREE.Geometry()
+  let earcutVertices = []
+  let geometryVertices = []
+  
+  for(let vertice of vertices){
+    geometryVertices.push( new THREE.Vector3(vertice.x, vertice.y, vertice.z) )
+    earcutVertices = earcutVertices.concat( [vertice.x, vertice.y, vertice.z] )
+  }
+  let triangleVertexs = earcut(earcutVertices,null,3) // earcut retorna un array con los indices de los vertices de cada triangulo - [1,0,3, 3,2,1] -
+
+  for(let i=0; i<triangleVertexs.length; i+=3){ // Por cada 3 vertices hay crear una cara
+    faces.push( new THREE.Face3( triangleVertexs[i], triangleVertexs[i+1], triangleVertexs[i+2] ) )
+  }
+
+  geometry.vertices = geometryVertices
+  geometry.faces = faces
+  
+  geometry.computeFaceNormals();
+
+  const color = new THREE.Color("rgb(150,50,50)")
+  const geometrymaterial = new THREE.MeshStandardMaterial( { 
+    color,
+    side: 2,
+    transparent: true,
+    opacity: 0.5
+  });
+
+  let loadedPolygon = new THREE.Mesh( geometry, geometrymaterial )
+  scene.add( loadedPolygon );
+}
+
 
 
 /* DIBUJAR POLIGONOS */
@@ -238,9 +287,10 @@ const intersections = (x,y) => {
   return raycaster.intersectObjects(scene.children, true)
 }
 
-let geometryVertices = []
+//let geometryVertices = []
 let earcutVertices = []
 let polygon
+let vertices = []
 
 function mouseClick(event){
   if(drawing === false) return
@@ -252,16 +302,20 @@ function mouseClick(event){
   scene.add(point)
   point.position.set(px, py, pz)
 
-  scene.remove(polygon)
+  vertices.push({x:px,y:py,z:pz})
+  //scene.remove(polygon)
 
-  let geometry = new THREE.Geometry()
-  let faces = []
-
-  geometryVertices.push( new THREE.Vector3(px, py, pz) )
-  earcutVertices = earcutVertices.concat( [px, py, pz] ) // Concatenamos porque earcut quiere esto : earcut([10,0,1, 0,50,2, 60,60,3, 70,10,4])
-
-  if(geometryVertices.length >= 3){
-
+  //geometryVertices.push( new THREE.Vector3(px, py, pz) )
+  //earcutVertices = earcutVertices.concat( [px, py, pz] ) // Concatenamos porque earcut quiere esto : earcut([10,0,1, 0,50,2, 60,60,3, 70,10,4])
+  
+  if(vertices.length >= 3){
+    
+    paintPolygon(vertices)
+    
+    /*
+    let faces = []
+    let geometry = new THREE.Geometry()
+    
     let triangleVertexs = earcut(earcutVertices,null,3) // earcut retorna un array con los indices de los vertices de cada triangulo - [1,0,3, 3,2,1] -
 
     for(let i=0; i<triangleVertexs.length; i+=3){ // Por cada 3 vertices hay crear una cara
@@ -273,7 +327,6 @@ function mouseClick(event){
     
     geometry.computeFaceNormals();
     
-
     const color = new THREE.Color("rgb(150,50,50)")
     const geometrymaterial = new THREE.MeshStandardMaterial( { 
       color,
@@ -281,9 +334,10 @@ function mouseClick(event){
       transparent: true,
       opacity: 0.5
     } );
+    */
 
-    polygon = new THREE.Mesh( geometry, geometrymaterial )
-    scene.add( polygon );
+    //polygon = new THREE.Mesh( geometry, geometrymaterial )
+    //scene.add( polygon );
   }
   render()
 
@@ -326,7 +380,7 @@ function keyPress(e){
         method:'POST',
         body: JSON.stringify({
           project: pathProjectId,
-          points: geometryVertices,
+          points: vertices,
           name: document.querySelector('#polygonName').value,
           color: 'green'
         }),
@@ -340,8 +394,8 @@ function keyPress(e){
       })
       .catch( error => console.error(error) )
       
-      geometryVertices = []
-      earcutVertices = []
+      vertices = []
+      //earcutVertices = []
       savePolygonModal.close()
     })
     savePolygonModal.addButton({text:'Cancel',color:'red',focus:false}, function(){
