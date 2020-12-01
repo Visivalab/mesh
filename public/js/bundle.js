@@ -45820,13 +45820,35 @@ Modal.prototype.write = function(text){
   document.querySelector(`#${this.id} .modal__content`).appendChild(modalText);
 };
 
-Modal.prototype.addButton = function(text,color,callback){
-  let buttonElement = document.createElement('div');
-  buttonElement.className = `button button--${color}`;
-  buttonElement.textContent = text;
-  buttonElement.addEventListener('click', callback);
+Modal.prototype.addInput = function(options){
+  let input = document.createElement('input');
+  input.type = options.type;
+  input.id = options.id;
+  input.name = options.name;
+  input.placeholder = options.placeholder;
 
+  document.querySelector(`#${this.id} .modal__content`).appendChild(input);
+
+  if(options.focus) input.focus();
+};
+
+Modal.prototype.addButton = function(options,callback){
+  let buttonElement = document.createElement('button');
+  buttonElement.className = `button--${options.color}`;
+  buttonElement.textContent = options.text;
+  buttonElement.addEventListener('click', callback);
+  
   document.querySelector(`#${this.id} .modal__buttons`).appendChild(buttonElement);
+  
+  if(options.focus) buttonElement.focus();
+  if(options.key) document.addEventListener('keydown', modalKeydown);
+
+  function modalKeydown(e){
+    if(options.key === e.key){
+      callback();
+      document.removeEventListener('keydown', modalKeydown);
+    }
+  }
 };
 
 Modal.prototype.close = function(){
@@ -51645,7 +51667,7 @@ function createGui(){
     });
     modalNewPolygon.mount();
     modalNewPolygon.write('<strong>Pulsa el ratón</strong> para crear el polígono.<br>Cuando termines, <strong>pulsa enter</strong>.');
-    modalNewPolygon.addButton('Ok','green',function(){
+    modalNewPolygon.addButton({text:'Ok',color:'green',focus:true}, function(){
       
       console.log("Empezar a dibujar");
       
@@ -51659,7 +51681,7 @@ function createGui(){
       modalNewPolygon.close();
     
     });
-    modalNewPolygon.addButton('Cancel','red',function(){
+    modalNewPolygon.addButton({text:'Cancel',color:'red',focus:false}, function(){
       modalNewPolygon.close();
     });
   });
@@ -51837,32 +51859,43 @@ function keyPress(e){
       background: true
     });
     savePolygonModal.mount();
-    savePolygonModal.write('Polígono terminado');
-    savePolygonModal.addButton('Save','green',function(){
-      console.log("Guardar y subir polígono");
+    savePolygonModal.write('Polígono terminado<br>Puedes ponerle un nombre:');
+    savePolygonModal.addInput({
+      type: 'text',
+      id: 'polygonName',
+      name: 'polygonName',
+      placeholder: 'Nome',
+      focus: true
+    });
+    savePolygonModal.addButton({
+      text:'Save',
+      color:'green',
+      focus: false,
+      key: 'Enter'
+    }, function(){
       fetch('/api/polygon/save',{
         method:'POST',
         body: JSON.stringify({
           project: pathProjectId,
           points: geometryVertices,
-          name: 'Base',
+          name: document.querySelector('#polygonName').value,
           color: 'green'
         }),
         headers:{
           'Content-Type': 'application/json'
         }
       })
-      .then( res => console.log(res.json()) )
-      .catch( error => console.error(error) )
+      .then( res => res.json() )
       .then( resp => {
         console.log('Added',resp);
-      });
-
+      })
+      .catch( error => console.error(error) );
+      
       geometryVertices = [];
       earcutVertices = [];
       savePolygonModal.close();
     });
-    savePolygonModal.addButton('Cancel','red',function(){
+    savePolygonModal.addButton({text:'Cancel',color:'red',focus:false}, function(){
       console.log("Nada, cancelar todo");
       savePolygonModal.close();
     });

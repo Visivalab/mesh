@@ -2,8 +2,7 @@ const Polygon = require('../models/Polygon')
 const Project = require('../models/Project')
 
 exports.savePolygon = async function(req,res){
-  // Guarda el poligono 
-  // Lo añade a un proyecto
+  // Guarda el poligono Y LO AÑADE AL PROYECTO
   let idProject = req.body.project
   const newPolygon = new Polygon({
     name: req.body.name,

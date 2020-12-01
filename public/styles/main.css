@@ -15,20 +15,24 @@ p{
   --red: #f0a1a1;
 }
 
-/* Helpers */
-.button{
+button{
   background-color: var(--steam);
   padding: 10px;
   border-radius: 5px;
   min-width: 60px;
   text-align: center;
   cursor: pointer;
+  border: none;
 }
-.button--green{
-  background-color: var(--green);
+button:focus{
+  outline:0
 }
-.button--red{
-  background-color: var(--red);
+.button--green{ background-color: var(--green) }
+.button--red{ background-color: var(--red) }
+
+.modal input{
+  padding: 10px;
+  border: 1px solid var(--black);
 }
 
 .modal{

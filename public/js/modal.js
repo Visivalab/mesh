@@ -1,4 +1,3 @@
-
 export function Modal(options){
   this.background = options.background || false
   this.place = options.place || 'body'
@@ -43,13 +42,35 @@ Modal.prototype.write = function(text){
   document.querySelector(`#${this.id} .modal__content`).appendChild(modalText)
 }
 
-Modal.prototype.addButton = function(text,color,callback){
-  let buttonElement = document.createElement('div')
-  buttonElement.className = `button button--${color}`
-  buttonElement.textContent = text
-  buttonElement.addEventListener('click', callback)
+Modal.prototype.addInput = function(options){
+  let input = document.createElement('input')
+  input.type = options.type
+  input.id = options.id
+  input.name = options.name
+  input.placeholder = options.placeholder
 
+  document.querySelector(`#${this.id} .modal__content`).appendChild(input)
+
+  if(options.focus) input.focus()
+}
+
+Modal.prototype.addButton = function(options,callback){
+  let buttonElement = document.createElement('button')
+  buttonElement.className = `button--${options.color}`
+  buttonElement.textContent = options.text
+  buttonElement.addEventListener('click', callback)
+  
   document.querySelector(`#${this.id} .modal__buttons`).appendChild(buttonElement)
+  
+  if(options.focus) buttonElement.focus()
+  if(options.key) document.addEventListener('keydown', modalKeydown)
+
+  function modalKeydown(e){
+    if(options.key === e.key){
+      callback()
+      document.removeEventListener('keydown', modalKeydown)
+    }
+  }
 }
 
 Modal.prototype.close = function(){
