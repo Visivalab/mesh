@@ -7,7 +7,7 @@ export const GUI = (function(){
     return gui
   }
 
-  function createLayer(id,name,callback = null){
+  function createBasic(id,name,callback = null){
     let layer = document.createElement('div')
     layer.className = 'gui__element'
     layer.id = id
@@ -78,7 +78,7 @@ export const GUI = (function(){
     
     // Si se le pasa un string en vez de un nodo, busca el id del elemento en el gui
     if(typeof where === 'string'){
-      let target = document.querySelector(`.gui #${where}`)
+      let target = document.querySelector(`.gui ${where}`)
       target.appendChild(what)
       return
     }
@@ -94,7 +94,7 @@ export const GUI = (function(){
 
   return{
     create,
-    createLayer,
+    createBasic,
     createSeparator,
     createButton,
     createGroup,

@@ -45761,7 +45761,7 @@ var GUI = function () {
     return gui;
   }
 
-  function createLayer(id, name) {
+  function createBasic(id, name) {
     var callback = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
     var layer = document.createElement('div');
     layer.className = 'gui__element';
@@ -45839,7 +45839,7 @@ var GUI = function () {
     // Esto no tiene ningun futuro puta
     // Si se le pasa un string en vez de un nodo, busca el id del elemento en el gui
     if (typeof where === 'string') {
-      var target = document.querySelector(".gui #".concat(where));
+      var target = document.querySelector(".gui ".concat(where));
       target.appendChild(what);
       return;
     }
@@ -45857,7 +45857,7 @@ var GUI = function () {
 
   return {
     create: create,
-    createLayer: createLayer,
+    createBasic: createBasic,
     createSeparator: createSeparator,
     createButton: createButton,
     createGroup: createGroup,
@@ -51742,11 +51742,11 @@ function createGui() {
       modalNewPolygon.close();
     });
   });
-  GUI.add(GUI.createLayer('enableAll', 'Enable all', function () {
+  GUI.add(GUI.createBasic('enableAll', 'Enable all', function () {
     camera.layers.enableAll();
     render();
   }), defaultOptions);
-  GUI.add(GUI.createLayer('disableAll', 'Disable all', function () {
+  GUI.add(GUI.createBasic('disableAll', 'Disable all', function () {
     camera.layers.disableAll();
     render();
   }), defaultOptions);
@@ -51804,11 +51804,11 @@ function loadProject() {
 
     var _loop = function _loop(i) {
       // En un for normal porque los layers deben tener numeros del 0 al 31 - https://threejs.org/docs/#api/en/core/Layers
-      var guiLayer = GUI.createLayer("layer_".concat(i), meshes[i].name, function () {
+      var guiLayer = GUI.createBasic("layer_".concat(i), meshes[i].name, function () {
         camera.layers.toggle(i);
         render();
       });
-      GUI.add(guiLayer, 'layers');
+      GUI.add(guiLayer, '#layers .gui__group__content');
       loadLayer(i, meshes[i]);
     };
 
@@ -51825,13 +51825,12 @@ function loadProject() {
     try {
       for (_iterator.s(); !(_step = _iterator.n()).done;) {
         var polygon = _step.value;
-        console.log(polygon); //Esto no seria createLayer.. quiza tengo que buscar un nombre que no líe, createElement
-
-        var guiLayer = GUI.createLayer("polygon_".concat(polygon.id), polygon.name, function () {
+        console.log(polygon);
+        var guiLayer = GUI.createBasic("polygon_".concat(polygon.id), polygon.name, function () {
           // Intentar no usar capas para esto, solo hay 32 layers como tal en three
           console.log("Apagar este polygon");
         });
-        GUI.add(guiLayer, 'polygons');
+        GUI.add(guiLayer, '#polygons .gui__group__content');
         scene.add(generatePolygon(polygon.points));
       }
     } catch (err) {

@@ -128,12 +128,12 @@ function createGui(){
     })
   })
   
-  GUI.add( GUI.createLayer('enableAll','Enable all', function(){
+  GUI.add( GUI.createBasic('enableAll','Enable all', function(){
     camera.layers.enableAll()
     render()
   }), defaultOptions)
 
-  GUI.add( GUI.createLayer('disableAll','Disable all', function(){
+  GUI.add( GUI.createBasic('disableAll','Disable all', function(){
     camera.layers.disableAll()
     render()
   }), defaultOptions)
@@ -208,11 +208,11 @@ function loadProject(){
     // Cargar las meshes de la base de datos
     for(let i=0; i<meshes.length; i++){ // En un for normal porque los layers deben tener numeros del 0 al 31 - https://threejs.org/docs/#api/en/core/Layers
 
-      let guiLayer = GUI.createLayer(`layer_${i}`, meshes[i].name, function(){
+      let guiLayer = GUI.createBasic(`layer_${i}`, meshes[i].name, function(){
         camera.layers.toggle( i )
         render()
       })
-      GUI.add(guiLayer,'layers')
+      GUI.add(guiLayer,'#layers .gui__group__content')
 
       loadLayer(i,meshes[i])
     }
@@ -223,12 +223,11 @@ function loadProject(){
     for( let polygon of polygons ){
       console.log(polygon)
 
-      //Esto no seria createLayer.. quiza tengo que buscar un nombre que no líe, createElement
-      let guiLayer = GUI.createLayer(`polygon_${polygon.id}`, polygon.name, function(){
+      let guiLayer = GUI.createBasic(`polygon_${polygon.id}`, polygon.name, function(){
         // Intentar no usar capas para esto, solo hay 32 layers como tal en three
         console.log("Apagar este polygon")
       })
-      GUI.add(guiLayer,'polygons')
+      GUI.add(guiLayer,'#polygons .gui__group__content')
 
       scene.add( generatePolygon(polygon.points) )
 

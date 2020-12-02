@@ -29,7 +29,31 @@
 .gui__group__content{
   display: none;
   flex-direction: column;
+  overflow-y: auto;
+  max-height: 250px;
+  margin-right: 19px;
 }
+
+/* Bar */
+.gui__group__content::-webkit-scrollbar{
+  width: 12px;
+  padding-right: 10px;
+}
+/* Track */
+.gui__group__content::-webkit-scrollbar-track {
+  box-shadow: inset 0 0 6px rgba(0,0,0,0.1);  
+  border-radius: 5px;
+}
+/* Handle */
+.gui__group__content::-webkit-scrollbar-thumb {
+  border-radius: 5px;
+  box-shadow: inset 0 0 6px rgba(0,0,0,0.1);
+  background: rgba(0, 0, 0, 0.4);
+}
+.gui__group__content::-webkit-scrollbar-thumb:window-inactive{
+  background: rgba(0,0,0,0.2); 
+}
+
 .gui__group.gui__group--active .gui__group__content{
   display: flex;
 }
