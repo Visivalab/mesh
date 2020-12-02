@@ -51954,8 +51954,8 @@ function loadSingleMesh(id, data) {
 
   api_loader.setDRACOLoader(dracoLoader); // Carga elementos de aws que agarra de la base de datos
 
-  api_loader.load('/public/meshes/teatro_decimated.glb', //data.url,
-  function (glb) {
+  api_loader.load( //'/public/meshes/teatro_decimated.glb',
+  data.url, function (glb) {
     console.group('Loading layer');
     console.log("DB layer info: ", data);
     console.log("Poner en la capa " + id);

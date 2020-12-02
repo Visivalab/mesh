@@ -263,8 +263,8 @@ function loadSingleMesh(id,data){
 
   
   api_loader.load(
-    '/public/meshes/teatro_decimated.glb',
-    //data.url,
+    //'/public/meshes/teatro_decimated.glb',
+    data.url,
     function(glb){
       console.group('Loading layer')
       console.log("DB layer info: ", data)
