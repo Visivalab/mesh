@@ -221,14 +221,60 @@ function loadProject(){
     // Como puede haber muchos poligonos, voy a reservar las capas 30 y 31 para puntos y polígonos (son las últimas ocupables)
     // O al ser poca carga, los puedo quitar y añadir de la escena en vez de apagarlos
     for( let polygon of polygons ){
-      console.log(polygon)
-
+      
       let optionsLayer = {
         edit:{
           'name': 'Edit',
           'image': '/styles/icons/menu_3puntosVertical.svg',
           'event': function(){
             console.log("Open element menu")
+            // !! Todo esto por supuesto en una funcion aparte, pero ver bien como organizar
+            let editPolyModal = new Modal({
+              background: true,
+              id: 'editPolyModal'
+            })
+            editPolyModal.mount()
+            editPolyModal.addInput({ type:'text',id:'newName',name:'newName',value:polygon.name})
+            editPolyModal.addInput({ type:'text',id:'newLink',name:'newLink',value:polygon.link})
+            editPolyModal.addButton({ text:'Guardar cambios',color:'green',key:'Enter'}, () => {
+              fetch('/api/polygon/update',{
+                method:'POST',
+                body: JSON.stringify({
+                  id: polygon._id,
+                  name: document.querySelector('#newName').value,
+                  link: document.querySelector('#newLink').value,
+                }),
+                headers:{
+                  'Content-Type': 'application/json'
+                }
+              })
+              .then( res => res.json() )
+              .then( resp => {
+                console.log('Updated', resp)
+                editPolyModal.close()
+
+                // !! Update existent después de un buen refactoring, que ahora seguro repetiria cosas otra vez
+
+              })
+            })
+            editPolyModal.addButton({ text:'Borrar',color:'red' }, () => {
+              fetch('/api/polygon/delete',{
+                method:'POST',
+                body: JSON.stringify({ id: polygon._id }),
+                headers:{ 'Content-Type': 'application/json' }
+              })
+              .then( res => res.json() )
+              .then( resp => {
+                console.log('Deleted', resp)
+                editPolyModal.close()
+
+                // !! Update existent después de un buen refactoring, que ahora seguro repetiria cosas otra vez
+
+              })
+            })
+            editPolyModal.addButton({ text:'Cancel' }, () => {
+              editPolyModal.close()
+            })
           }
         }
       }
@@ -238,7 +284,7 @@ function loadProject(){
           'image': '/styles/icons/link.svg',
           'event': function(){
             console.log("Open link")
-            window.open(resp.link, '_blank')
+            window.open(polygon.link, '_blank')
           }
         }
       }

@@ -45926,11 +45926,14 @@ Modal.prototype.write = function (text) {
 };
 
 Modal.prototype.addInput = function (options) {
+  var _options$value, _options$placeholder;
+
   var input = document.createElement('input');
   input.type = options.type;
   input.id = options.id;
   input.name = options.name;
-  input.placeholder = options.placeholder;
+  input.value = (_options$value = options.value) !== null && _options$value !== void 0 ? _options$value : '';
+  input.placeholder = (_options$placeholder = options.placeholder) !== null && _options$placeholder !== void 0 ? _options$placeholder : '';
   document.querySelector("#".concat(this.id, " .modal__content")).appendChild(input);
   if (options.focus) input.focus();
 };
@@ -51843,15 +51846,78 @@ function loadProject() {
         _step;
 
     try {
-      for (_iterator.s(); !(_step = _iterator.n()).done;) {
+      var _loop2 = function _loop2() {
         var polygon = _step.value;
-        console.log(polygon);
         var optionsLayer = {
           edit: {
             'name': 'Edit',
             'image': '/styles/icons/menu_3puntosVertical.svg',
             'event': function event() {
-              console.log("Open element menu");
+              console.log("Open element menu"); // !! Todo esto por supuesto en una funcion aparte, pero ver bien como organizar
+
+              var editPolyModal = new Modal({
+                background: true,
+                id: 'editPolyModal'
+              });
+              editPolyModal.mount();
+              editPolyModal.addInput({
+                type: 'text',
+                id: 'newName',
+                name: 'newName',
+                value: polygon.name
+              });
+              editPolyModal.addInput({
+                type: 'text',
+                id: 'newLink',
+                name: 'newLink',
+                value: polygon.link
+              });
+              editPolyModal.addButton({
+                text: 'Guardar cambios',
+                color: 'green',
+                key: 'Enter'
+              }, function () {
+                fetch('/api/polygon/update', {
+                  method: 'POST',
+                  body: JSON.stringify({
+                    id: polygon._id,
+                    name: document.querySelector('#newName').value,
+                    link: document.querySelector('#newLink').value
+                  }),
+                  headers: {
+                    'Content-Type': 'application/json'
+                  }
+                }).then(function (res) {
+                  return res.json();
+                }).then(function (resp) {
+                  console.log('Updated', resp);
+                  editPolyModal.close(); // !! Update existent después de un buen refactoring, que ahora seguro repetiria cosas otra vez
+                });
+              });
+              editPolyModal.addButton({
+                text: 'Borrar',
+                color: 'red'
+              }, function () {
+                fetch('/api/polygon/delete', {
+                  method: 'POST',
+                  body: JSON.stringify({
+                    id: polygon._id
+                  }),
+                  headers: {
+                    'Content-Type': 'application/json'
+                  }
+                }).then(function (res) {
+                  return res.json();
+                }).then(function (resp) {
+                  console.log('Deleted', resp);
+                  editPolyModal.close(); // !! Update existent después de un buen refactoring, que ahora seguro repetiria cosas otra vez
+                });
+              });
+              editPolyModal.addButton({
+                text: 'Cancel'
+              }, function () {
+                editPolyModal.close();
+              });
             }
           }
         };
@@ -51862,7 +51928,7 @@ function loadProject() {
             'image': '/styles/icons/link.svg',
             'event': function event() {
               console.log("Open link");
-              window.open(resp.link, '_blank');
+              window.open(polygon.link, '_blank');
             }
           };
         }
@@ -51873,6 +51939,10 @@ function loadProject() {
         }, optionsLayer);
         GUI.add(guiLayer, '#polygons .gui__group__content');
         scene.add(generatePolygon(polygon.points));
+      };
+
+      for (_iterator.s(); !(_step = _iterator.n()).done;) {
+        _loop2();
       }
     } catch (err) {
       _iterator.e(err);

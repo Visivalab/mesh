@@ -47,7 +47,8 @@ Modal.prototype.addInput = function(options){
   input.type = options.type
   input.id = options.id
   input.name = options.name
-  input.placeholder = options.placeholder
+  input.value = options.value ?? ''
+  input.placeholder = options.placeholder ?? ''
 
   document.querySelector(`#${this.id} .modal__content`).appendChild(input)
 

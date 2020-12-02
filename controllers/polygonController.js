@@ -18,3 +18,18 @@ exports.savePolygon = async function(req,res){
 
   res.send(newPolygon)
 }
+
+exports.updatePolygon = async function(req,res){
+  // Agarra el poligono en questión y cambia cosas
+  let updatePolygon = await Polygon.findById(req.body.id)
+  updatePolygon.name = req.body.name
+  updatePolygon.link = req.body.link
+  updatePolygon.save()
+
+  res.send(updatePolygon)
+}
+
+exports.deletePolygon = async function(req,res){
+  let deletePolygon = await Polygon.findByIdAndDelete(req.body.id)
+  res.send(deletePolygon)
+}

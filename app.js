@@ -50,6 +50,9 @@ app.get('/api/projects', projectController.allProjects)
 app.get('/api/project/:id', projectController.project)
 //app.get('/api/mesh', meshController.getMesh)
 app.post('/api/polygon/save', jsonParser, polygonController.savePolygon)
+app.post('/api/polygon/update', jsonParser, polygonController.updatePolygon)
+app.post('/api/polygon/delete', jsonParser, polygonController.deletePolygon)
+
 //app.get('/api/polygon/:id', polygonController.getPolygon) // Coje un poligono concreto mediante su id
 app.listen(port, () => {
   console.log(`App en marcha -> http://localhost:${port}`)
