@@ -51667,10 +51667,11 @@ DRACOLoader.getDecoderModule = function () {
 
 var renderer, scene, camera, controls, ambientLight;
 var container, mainGui;
-var mesh;
 var pathProjectId = window.location.pathname.split('/').pop();
 var raycaster = new Raycaster();
 var mouse = new Vector2(); // Objeto que define la creación de cada modal, para poder encontrarlo y editarlo facilmente
+// No estoy muy seguro de la utilidad o practicidad real de esto
+// Además no puedo modificar o cerrar las modales desde otro lado porque no estan definidas fuera de este scope, que tampoco es del todo malo.
 
 var modals = {
   'modalNewPolygon': function modalNewPolygon() {
@@ -51685,7 +51686,7 @@ var modals = {
       color: 'green',
       focus: true
     }, function () {
-      initPolygonCreation();
+      polygonModule.initPolygonCreation();
       modalNewPolygon.close();
     });
     modalNewPolygon.addButton({
@@ -51694,6 +51695,107 @@ var modals = {
       focus: false
     }, function () {
       modalNewPolygon.close();
+    });
+  },
+  'modalEditPolygon': function modalEditPolygon(polygon) {
+    var editPolyModal = new Modal({
+      background: true,
+      id: 'editPolyModal'
+    });
+    editPolyModal.mount();
+    editPolyModal.addInput({
+      type: 'text',
+      id: 'newName',
+      name: 'newName',
+      value: polygon.name
+    });
+    editPolyModal.addInput({
+      type: 'text',
+      id: 'newLink',
+      name: 'newLink',
+      value: polygon.link
+    });
+    editPolyModal.addButton({
+      text: 'Guardar cambios',
+      color: 'green',
+      key: 'Enter'
+    }, function () {
+      polygonModule.saveUpdatedPolygon(polygon);
+      editPolyModal.close();
+    });
+    editPolyModal.addButton({
+      text: 'Borrar',
+      color: 'red'
+    }, function () {
+      modals.modalConfirmDeletePolygon(polygon);
+    });
+    editPolyModal.addButton({
+      text: 'Cancel'
+    }, function () {
+      editPolyModal.close();
+    });
+  },
+  'modalConfirmDeletePolygon': function modalConfirmDeletePolygon(polygon) {
+    var confirmDelete = new Modal({
+      id: 'confirmDelete'
+    });
+    confirmDelete.mount();
+    confirmDelete.write('Seguro?');
+    confirmDelete.addButton({
+      text: 'Si',
+      color: 'red',
+      key: 'Enter'
+    }, function () {
+      polygonModule.deletePolygon(polygon);
+      confirmDelete.close();
+    });
+    confirmDelete.addButton({
+      text: 'No',
+      color: 'green',
+      key: 'Escape'
+    }, function () {
+      confirmDelete.close();
+    });
+  },
+  'modalSavePolygon': function modalSavePolygon() {
+    var savePolygonModal = new Modal({
+      id: 'savePolygon',
+      background: true
+    });
+    savePolygonModal.mount();
+    savePolygonModal.write('Polígono terminado<br>Puedes ponerle un nombre:');
+    savePolygonModal.addInput({
+      type: 'text',
+      id: 'polygonName',
+      name: 'polygonName',
+      placeholder: 'Nome',
+      focus: true
+    });
+    savePolygonModal.addInput({
+      type: 'text',
+      id: 'polygonLink',
+      name: 'polygonLink',
+      placeholder: 'link'
+    });
+    savePolygonModal.addButton({
+      text: 'Save',
+      color: 'green',
+      focus: false,
+      key: 'Enter'
+    }, function () {
+      polygonModule.savePolygonInfo();
+      polygonModule.cleanPolygonCreated(false);
+      savePolygonModal.close();
+      render();
+    });
+    savePolygonModal.addButton({
+      text: 'Cancel',
+      color: 'red',
+      focus: false
+    }, function () {
+      polygonModule.cleanPolygonCreated(true);
+      savePolygonModal.close();
+      render();
     });
   }
 };
@@ -51704,6 +51806,16 @@ function createCamera() {
   camera.position.set(-40, 40, 40);
   camera.layers.enable(0);
   scene.add(camera);
+}
+
+function enableAllLayers() {
+  camera.layers.enableAll();
+  render();
+}
+
+function disableAllLayers() {
+  camera.layers.disableAll();
+  render();
 }
 
 function createLights() {
@@ -51764,8 +51876,6 @@ function init() {
   render();
   window.addEventListener('resize', onWindowResize, false);
 }
-/* CREAR ELEMENTO INTERFAZ */
-
 
 function createGui() {
   mainGui = GUI.create();
@@ -51782,35 +51892,52 @@ function createGui() {
   GUI.add(GUI.createBasic('disableAll', 'Disable all', disableAllLayers), defaultOptions);
   GUI.add(defaultOptions, mainGui);
   document.querySelector('body').appendChild(mainGui);
-} // !! No en su sitio
-
-
-function enableAllLayers() {
-  camera.layers.enableAll();
-  render();
-} // !! No en su sitio
-
-
-function disableAllLayers() {
-  camera.layers.disableAll();
-  render();
-} // !! No en su sitio
-
-
-function initPolygonCreation() {
-  container.addEventListener('click', newPolygonPoint);
-  container.addEventListener('keypress', saveCreatedPolygon);
-} // !! No en su sitio
-
-
-function stopPolygonCreation() {
-  container.removeEventListener('click', newPolygonPoint);
-  container.removeEventListener('keypress', saveCreatedPolygon);
 }
-/* CARGAR MESH */
 
+function loadProject() {
+  fetch('/api/project/' + pathProjectId).then(function (response) {
+    return response.json();
+  }).then(function (project) {
+    console.log("Project: ".concat(project._id), project);
+    loadMeshes(project.meshes);
+    loadPolygons(project.polygons);
+  });
+}
 
-function loadLayer(id, data) {
+function loadMeshes(meshes) {
+  var _loop = function _loop(i) {
+    // En un for normal porque los layers deben tener numeros del 0 al 31 - https://threejs.org/docs/#api/en/core/Layers
+    var guiLayer = GUI.createBasic("layer_".concat(i), meshes[i].name, function () {
+      camera.layers.toggle(i);
+      render();
+    });
+    GUI.add(guiLayer, '#layers .gui__group__content');
+    loadSingleMesh(i, meshes[i]);
+  };
+
+  for (var i = 0; i < meshes.length; i++) {
+    _loop(i);
+  }
+}
+
+function loadPolygons(polygons) {
+  var _iterator = _createForOfIteratorHelper(polygons),
+      _step;
+
+  try {
+    for (_iterator.s(); !(_step = _iterator.n()).done;) {
+      var polygon = _step.value;
+      addGUIPolygon(polygon);
+      scene.add(generatePolygon(polygon.points));
+    }
+  } catch (err) {
+    _iterator.e(err);
+  } finally {
+    _iterator.f();
+  }
+}
+
+function loadSingleMesh(id, data) {
   var api_loader = new GLTFLoader(); // Las meshes estan comprimidas con DRACO para que pesen MUCHISIMO menos, pero se necesita el descodificador draco para cargarlas - https://threejs.org/docs/#examples/en/loaders/GLTFLoader
 
   var dracoLoader = new DRACOLoader();
@@ -51824,7 +51951,6 @@ function loadLayer(id, data) {
     console.log("DB layer info: ", data);
     console.log("Poner en la capa " + id);
     console.log("glb info: ", glb);
-    mesh = glb.scene;
     scene.add(glb.scene); // Todos los hijos de la escena deben tener el layer, no vale con setear solamente la escena. traverse recorre todos los hijos
 
     glb.scene.traverse(function (child) {
@@ -51843,180 +51969,231 @@ function loadLayer(id, data) {
   });
 }
 
-function loadProject() {
-  fetch('/api/project/' + pathProjectId).then(function (response) {
-    return response.json();
-  }).then(function (project) {
-    console.log("Project: ".concat(project._id), project);
-    var meshes = project.meshes;
-    var polygons = project.polygons; // Cargar las meshes de la base de datos
+function addGUIPolygon(polygon) {
+  // Creamos el elemento adecuado para poner en el GUI
+  var guiElement_options = {
+    edit: {
+      'name': 'Edit',
+      'image': '/styles/icons/menu_3puntosVertical.svg',
+      'event': function event() {
+        console.log("Open element menu");
+        modals.modalEditPolygon(polygon);
+      }
+    }
+  };
 
-    var _loop = function _loop(i) {
-      // En un for normal porque los layers deben tener numeros del 0 al 31 - https://threejs.org/docs/#api/en/core/Layers
-      var guiLayer = GUI.createBasic("layer_".concat(i), meshes[i].name, function () {
-        camera.layers.toggle(i);
-        render();
-      });
-      GUI.add(guiLayer, '#layers .gui__group__content');
-      loadLayer(i, meshes[i]);
+  if (polygon.link) {
+    guiElement_options.openLink = {
+      'name': 'Open link',
+      'image': '/styles/icons/link.svg',
+      'event': function event() {
+        console.log("Open link");
+        window.open(polygon.link, '_blank');
+      }
     };
+  }
 
-    for (var i = 0; i < meshes.length; i++) {
-      _loop(i);
-    } // Cargar los polígonos
-    // Como puede haber muchos poligonos, voy a reservar las capas 30 y 31 para puntos y polígonos (son las últimas ocupables)
-    // O al ser poca carga, los puedo quitar y añadir de la escena en vez de apagarlos
+  var guiElement = GUI.createBasic("polygon_".concat(polygon._id), polygon.name, function () {
+    // No usar capas para esto, solo hay 32 layers como tal en three. Remover y añadir los poligonos tal qual
+    console.log("Apagar este polygon");
+  }, guiElement_options); // Añadimos el polígono generado a la escena
+
+  GUI.add(guiElement, '#polygons .gui__group__content');
+}
+/* Módulo de CONTROL de CREACIÓN/MODIFICACIÓN/BORRAción.. de los polígonos */
 
 
-    var _iterator = _createForOfIteratorHelper(polygons),
-        _step;
+var polygonModule = function () {
+  var newPolygonVertices = [];
+  var newPolygons = []; // Para poderlos borrar cuadno se cancela, hay que guardar la instancia en algun lado
+
+  var clickingPoints = []; // Para poderlos borrar cuando se cancela, hay que guardar la instancia en algun lado
+
+  function initPolygonCreation() {
+    container.addEventListener('click', newPolygonPoint);
+    container.addEventListener('keypress', saveCreatedPolygon);
+  }
+
+  function stopPolygonCreation() {
+    container.removeEventListener('click', newPolygonPoint);
+    container.removeEventListener('keypress', saveCreatedPolygon);
+  }
+
+  function newPolygonPoint(event) {
+    var intersects = intersections(event.clientX, event.clientY);
+    var _ref = [intersects[0].point.x, intersects[0].point.y, intersects[0].point.z],
+        px = _ref[0],
+        py = _ref[1],
+        pz = _ref[2];
+    var point = createPoint();
+    clickingPoints.push(point);
+    scene.add(point);
+    point.position.set(px, py, pz);
+    newPolygonVertices.push({
+      x: px,
+      y: py,
+      z: pz
+    });
+
+    if (newPolygonVertices.length >= 3) {
+      var newPolygon = generatePolygon(newPolygonVertices);
+      newPolygons.push(newPolygon);
+      scene.add(newPolygon); // !! Ver como No ir poniendo los polígonos uno encima de otro..
+    }
+
+    render();
+  }
+
+  function saveCreatedPolygon(e) {
+    if (e.key === "Enter") {
+      stopPolygonCreation();
+      modals.modalSavePolygon();
+    }
+  }
+
+  function saveUpdatedPolygon(polygon) {
+    fetch('/api/polygon/update', {
+      method: 'POST',
+      body: JSON.stringify({
+        id: polygon._id,
+        name: document.querySelector('#newName').value,
+        link: document.querySelector('#newLink').value
+      }),
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }).then(function (res) {
+      return res.json();
+    }).then(function (resp) {
+      console.log('Updated', resp); // !! Update existent después de un buen refactoring, que ahora seguro repetiria cosas otra vez
+    });
+  }
+
+  function deletePolygon(polygon) {
+    fetch('/api/polygon/delete', {
+      method: 'POST',
+      body: JSON.stringify({
+        id: polygon._id
+      }),
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }).then(function (res) {
+      return res.json();
+    }).then(function (resp) {
+      console.log('Deleted', resp); // !! Update existent después de un buen refactoring, que ahora seguro repetiria cosas otra vez
+    });
+  }
+
+  function savePolygonInfo() {
+    fetch('/api/polygon/save', {
+      method: 'POST',
+      body: JSON.stringify({
+        project: pathProjectId,
+        points: newPolygonVertices,
+        name: document.querySelector('#polygonName').value,
+        link: document.querySelector('#polygonLink').value,
+        color: 'green'
+      }),
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }).then(function (res) {
+      return res.json();
+    }).then(function (resp) {
+      addGUIPolygon(resp);
+    }).catch(function (error) {
+      return console.error(error);
+    });
+  }
+
+  function cleanPolygonCreated(all) {
+    if (all) {
+      var _iterator2 = _createForOfIteratorHelper(newPolygons),
+          _step2;
+
+      try {
+        for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
+          var polygon = _step2.value;
+          scene.remove(polygon);
+        }
+      } catch (err) {
+        _iterator2.e(err);
+      } finally {
+        _iterator2.f();
+      }
+
+      newPolygons = [];
+    }
+
+    var _iterator3 = _createForOfIteratorHelper(clickingPoints),
+        _step3;
 
     try {
-      var _loop2 = function _loop2() {
-        var polygon = _step.value;
-        var optionsLayer = {
-          edit: {
-            'name': 'Edit',
-            'image': '/styles/icons/menu_3puntosVertical.svg',
-            'event': function event() {
-              console.log("Open element menu"); // !! Todo esto por supuesto en una funcion aparte, pero ver bien como organizar
-
-              var editPolyModal = new Modal({
-                background: true,
-                id: 'editPolyModal'
-              });
-              editPolyModal.mount();
-              editPolyModal.addInput({
-                type: 'text',
-                id: 'newName',
-                name: 'newName',
-                value: polygon.name
-              });
-              editPolyModal.addInput({
-                type: 'text',
-                id: 'newLink',
-                name: 'newLink',
-                value: polygon.link
-              });
-              editPolyModal.addButton({
-                text: 'Guardar cambios',
-                color: 'green',
-                key: 'Enter'
-              }, function () {
-                fetch('/api/polygon/update', {
-                  method: 'POST',
-                  body: JSON.stringify({
-                    id: polygon._id,
-                    name: document.querySelector('#newName').value,
-                    link: document.querySelector('#newLink').value
-                  }),
-                  headers: {
-                    'Content-Type': 'application/json'
-                  }
-                }).then(function (res) {
-                  return res.json();
-                }).then(function (resp) {
-                  console.log('Updated', resp);
-                  editPolyModal.close(); // !! Update existent después de un buen refactoring, que ahora seguro repetiria cosas otra vez
-                });
-              });
-              editPolyModal.addButton({
-                text: 'Borrar',
-                color: 'red'
-              }, function () {
-                var confirmDelete = new Modal({
-                  id: 'confirmDelete'
-                });
-                confirmDelete.mount();
-                confirmDelete.write('Seguro?');
-                confirmDelete.addButton({
-                  text: 'Si',
-                  color: 'red',
-                  key: 'Enter'
-                }, function () {
-                  fetch('/api/polygon/delete', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                      id: polygon._id
-                    }),
-                    headers: {
-                      'Content-Type': 'application/json'
-                    }
-                  }).then(function (res) {
-                    return res.json();
-                  }).then(function (resp) {
-                    console.log('Deleted', resp);
-                    editPolyModal.close();
-                    confirmDelete.close(); // !! Update existent después de un buen refactoring, que ahora seguro repetiria cosas otra vez
-                  });
-                });
-                confirmDelete.addButton({
-                  text: 'No',
-                  color: 'green',
-                  key: 'Escape'
-                }, function () {
-                  confirmDelete.close();
-                });
-              });
-              editPolyModal.addButton({
-                text: 'Cancel'
-              }, function () {
-                editPolyModal.close();
-              });
-            }
-          }
-        };
-
-        if (polygon.link) {
-          optionsLayer.openLink = {
-            'name': 'Open link',
-            'image': '/styles/icons/link.svg',
-            'event': function event() {
-              console.log("Open link");
-              window.open(polygon.link, '_blank');
-            }
-          };
-        }
-
-        var guiLayer = GUI.createBasic("polygon_".concat(polygon.id), polygon.name, function () {
-          // Intentar no usar capas para esto, solo hay 32 layers como tal en three
-          console.log("Apagar este polygon");
-        }, optionsLayer);
-        GUI.add(guiLayer, '#polygons .gui__group__content');
-        scene.add(generatePolygon(polygon.points));
-      };
-
-      for (_iterator.s(); !(_step = _iterator.n()).done;) {
-        _loop2();
+      for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
+        var point = _step3.value;
+        scene.remove(point);
       }
     } catch (err) {
-      _iterator.e(err);
+      _iterator3.e(err);
     } finally {
-      _iterator.f();
+      _iterator3.f();
     }
-  });
-}
+
+    newPolygonVertices = [];
+    clickingPoints = [];
+  }
+
+  var intersections = function intersections(x, y) {
+    mouse.x = x / renderer.domElement.clientWidth * 2 - 1;
+    mouse.y = -(y / renderer.domElement.clientHeight) * 2 + 1;
+    raycaster.setFromCamera(mouse, camera);
+    return raycaster.intersectObjects(scene.children, true);
+  };
+
+  function createPoint() {
+    var ico = new IcosahedronGeometry(0.3);
+    var material = new MeshBasicMaterial({
+      color: 0xd9d9d9
+    });
+    var point = new Mesh(ico, material);
+    return point;
+  }
+
+  return {
+    cleanPolygonCreated: cleanPolygonCreated,
+    savePolygonInfo: savePolygonInfo,
+    deletePolygon: deletePolygon,
+    saveUpdatedPolygon: saveUpdatedPolygon,
+    initPolygonCreation: initPolygonCreation
+  };
+}();
+/* HELPERS GENERALES */
+
+/* Genera un polígono three a partir de un array de objetos de vertices -> [{x:,y:,z:},] 
+  No añade el polígono a la escena, solo crea la geometria y la devuelve para ser usada 
+  Se usa durante la creación del polígono, pero tambien cuando se cargan todos los polígonos en la escena */
+
 
 function generatePolygon(vertices) {
-  //vertices es { x, y, z }
   var faces = [];
   var geometry = new Geometry();
   var earcutVertices = [];
   var geometryVertices = [];
 
-  var _iterator2 = _createForOfIteratorHelper(vertices),
-      _step2;
+  var _iterator4 = _createForOfIteratorHelper(vertices),
+      _step4;
 
   try {
-    for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
-      var vertice = _step2.value;
+    for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
+      var vertice = _step4.value;
       geometryVertices.push(new Vector3(vertice.x, vertice.y, vertice.z));
       earcutVertices = earcutVertices.concat([vertice.x, vertice.y, vertice.z]);
     }
   } catch (err) {
-    _iterator2.e(err);
+    _iterator4.e(err);
   } finally {
-    _iterator2.f();
+    _iterator4.f();
   }
 
   var triangleVertexs = earcut_1(earcutVertices, null, 3); // earcut retorna un array con los indices de los vertices de cada triangulo - [1,0,3, 3,2,1] -
@@ -52038,192 +52215,4 @@ function generatePolygon(vertices) {
   });
   var createdPolygon = new Mesh(geometry, geometrymaterial);
   return createdPolygon;
-}
-/* DIBUJAR POLIGONOS */
-
-
-var intersections = function intersections(x, y) {
-  mouse.x = x / renderer.domElement.clientWidth * 2 - 1;
-  mouse.y = -(y / renderer.domElement.clientHeight) * 2 + 1;
-  raycaster.setFromCamera(mouse, camera);
-  return raycaster.intersectObjects(scene.children, true);
-};
-
-var newPolygonVertices = [];
-var newPolygons = []; // Para poderlos borrar cuadno se cancela, hay que guardar la instancia en algun lado
-
-var clickingPoints = []; // Para poderlos borrar cuando se cancela, hay que guardar la instancia en algun lado
-
-function newPolygonPoint(event) {
-  var intersects = intersections(event.clientX, event.clientY);
-  var _ref = [intersects[0].point.x, intersects[0].point.y, intersects[0].point.z],
-      px = _ref[0],
-      py = _ref[1],
-      pz = _ref[2];
-  var point = createPoint();
-  clickingPoints.push(point);
-  scene.add(point);
-  point.position.set(px, py, pz);
-  newPolygonVertices.push({
-    x: px,
-    y: py,
-    z: pz
-  });
-
-  if (newPolygonVertices.length >= 3) {
-    var newPolygon = generatePolygon(newPolygonVertices);
-    newPolygons.push(newPolygon);
-    scene.add(newPolygon); // !! Ver como No ir poniendo los polígonos uno encima de otro..
-  }
-
-  render();
-}
-
-function createPoint() {
-  var ico = new IcosahedronGeometry(0.3);
-  var material = new MeshBasicMaterial({
-    color: 0xd9d9d9
-  });
-  var point = new Mesh(ico, material);
-  return point;
-}
-
-function saveCreatedPolygon(e) {
-  if (e.key === "Enter") {
-    stopPolygonCreation();
-    console.log("End polygon");
-    var savePolygonModal = new Modal({
-      id: 'savePolygon',
-      background: true
-    });
-    savePolygonModal.mount();
-    savePolygonModal.write('Polígono terminado<br>Puedes ponerle un nombre:');
-    savePolygonModal.addInput({
-      type: 'text',
-      id: 'polygonName',
-      name: 'polygonName',
-      placeholder: 'Nome',
-      focus: true
-    });
-    savePolygonModal.addInput({
-      type: 'text',
-      id: 'polygonLink',
-      name: 'polygonLink',
-      placeholder: 'link'
-    });
-    savePolygonModal.addButton({
-      text: 'Save',
-      color: 'green',
-      focus: false,
-      key: 'Enter'
-    }, function () {
-      fetch('/api/polygon/save', {
-        method: 'POST',
-        body: JSON.stringify({
-          project: pathProjectId,
-          points: newPolygonVertices,
-          name: document.querySelector('#polygonName').value,
-          link: document.querySelector('#polygonLink').value,
-          color: 'green'
-        }),
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }).then(function (res) {
-        return res.json();
-      }).then(function (resp) {
-        // Añadir poligono en gui y dejarlo bien, sin puntos en los vertices etc
-        // Podria añadirlo sin mas o recargar la lista
-        // !! Esto está repetido de mas arriba. Hacer refactor de la creación de capas
-        var optionsLayer = {
-          edit: {
-            'name': 'Edit',
-            'image': '/styles/icons/menu_3puntosVertical.svg',
-            'event': function event() {
-              console.log("Open element menu");
-            }
-          }
-        };
-
-        if (resp.link) {
-          optionsLayer.openLink = {
-            'name': 'Open link',
-            'image': '/styles/icons/link.svg',
-            'event': function event() {
-              console.log("Open link");
-              window.open(resp.link, '_blank');
-            }
-          };
-        }
-
-        var guiLayer = GUI.createBasic("polygon_".concat(resp._id), resp.name, function () {
-          // Intentar no usar capas para esto, solo hay 32 layers como tal en three
-          console.log("Apagar este polygon");
-        }, optionsLayer);
-        GUI.add(guiLayer, '#polygons .gui__group__content');
-        console.log('Added', resp);
-      }).catch(function (error) {
-        return console.error(error);
-      });
-
-      var _iterator3 = _createForOfIteratorHelper(clickingPoints),
-          _step3;
-
-      try {
-        for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
-          var point = _step3.value;
-          scene.remove(point);
-        }
-      } catch (err) {
-        _iterator3.e(err);
-      } finally {
-        _iterator3.f();
-      }
-
-      newPolygonVertices = [];
-      clickingPoints = [];
-      console.log("Added polygons this session: ", newPolygons);
-      savePolygonModal.close();
-      render();
-    });
-    savePolygonModal.addButton({
-      text: 'Cancel',
-      color: 'red',
-      focus: false
-    }, function () {
-      var _iterator4 = _createForOfIteratorHelper(clickingPoints),
-          _step4;
-
-      try {
-        for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
-          var point = _step4.value;
-          scene.remove(point);
-        }
-      } catch (err) {
-        _iterator4.e(err);
-      } finally {
-        _iterator4.f();
-      }
-
-      var _iterator5 = _createForOfIteratorHelper(newPolygons),
-          _step5;
-
-      try {
-        for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
-          var polygon = _step5.value;
-          scene.remove(polygon);
-        }
-      } catch (err) {
-        _iterator5.e(err);
-      } finally {
-        _iterator5.f();
-      }
-
-      newPolygonVertices = [];
-      clickingPoints = [];
-      newPolygons = [];
-      savePolygonModal.close();
-      render();
-    });
-  }
 }

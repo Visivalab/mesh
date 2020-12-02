@@ -9,7 +9,6 @@ import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader';
 
 let renderer, scene, camera, controls, ambientLight;
 let container, mainGui;
-let mesh;
 
 let pathProjectId = window.location.pathname.split('/').pop()
 
@@ -17,6 +16,8 @@ const raycaster = new THREE.Raycaster()
 const mouse = new THREE.Vector2()
 
 // Objeto que define la creación de cada modal, para poder encontrarlo y editarlo facilmente
+// No estoy muy seguro de la utilidad o practicidad real de esto
+// Además no puedo modificar o cerrar las modales desde otro lado porque no estan definidas fuera de este scope, que tampoco es del todo malo.
 const modals = {
   'modalNewPolygon': function(){
     let modalNewPolygon = new Modal({
@@ -26,16 +27,73 @@ const modals = {
     modalNewPolygon.mount()
     modalNewPolygon.write('<strong>Pulsa el ratón</strong> para crear el polígono.<br>Cuando termines, <strong>pulsa enter</strong>.')
     modalNewPolygon.addButton({text:'Ok',color:'green',focus:true}, function(){
-      initPolygonCreation()
+      polygonModule.initPolygonCreation()
       modalNewPolygon.close()
     })
     modalNewPolygon.addButton({text:'Cancel',color:'red',focus:false}, function(){
       modalNewPolygon.close()
     })
+  },
+  'modalEditPolygon': function(polygon){
+    let editPolyModal = new Modal({
+      background: true,
+      id: 'editPolyModal'
+    })
+    editPolyModal.mount()
+    editPolyModal.addInput({ type:'text',id:'newName',name:'newName',value:polygon.name})
+    editPolyModal.addInput({ type:'text',id:'newLink',name:'newLink',value:polygon.link})
+    editPolyModal.addButton({ text:'Guardar cambios',color:'green',key:'Enter'}, () => {
+      polygonModule.saveUpdatedPolygon(polygon)
+      editPolyModal.close()
+    })
+    editPolyModal.addButton({ text:'Borrar',color:'red' }, () => {
+      modals.modalConfirmDeletePolygon(polygon)
+    })
+    editPolyModal.addButton({ text:'Cancel' }, () => {
+      editPolyModal.close()
+    })
+  },
+  'modalConfirmDeletePolygon': function(polygon){
+    let confirmDelete = new Modal({
+      id: 'confirmDelete'
+    })
+    confirmDelete.mount()
+    confirmDelete.write('Seguro?')
+    confirmDelete.addButton({ text:'Si',color:'red',key:'Enter' }, () => {
+      polygonModule.deletePolygon(polygon)
+      confirmDelete.close()
+    })
+    confirmDelete.addButton({ text:'No',color:'green',key:'Escape' }, () => {
+      confirmDelete.close()
+    })
+  },
+  'modalSavePolygon': function(){
+    let savePolygonModal = new Modal({
+      id:'savePolygon',
+      background: true
+    })
+    savePolygonModal.mount()
+    savePolygonModal.write('Polígono terminado<br>Puedes ponerle un nombre:')
+    savePolygonModal.addInput({ type: 'text', id: 'polygonName', name: 'polygonName', placeholder: 'Nome', focus: true })
+    savePolygonModal.addInput({ type: 'text', id: 'polygonLink', name: 'polygonLink', placeholder: 'link' })
+    savePolygonModal.addButton({ text:'Save', color:'green', focus: false, key: 'Enter' }, function(){
+      polygonModule.savePolygonInfo()
+      polygonModule.cleanPolygonCreated(false)
+      
+      savePolygonModal.close()
+      render()
+    })
+    savePolygonModal.addButton({text:'Cancel',color:'red',focus:false}, function(){
+      polygonModule.cleanPolygonCreated(true)
+
+      savePolygonModal.close()
+      render()
+    })
   }
 }
 
 init();
+
 
 function createCamera(){
     
@@ -45,6 +103,16 @@ function createCamera(){
   camera.layers.enable( 0 );
   scene.add( camera );
 
+}
+
+function enableAllLayers(){
+  camera.layers.enableAll()
+  render()
+}
+
+function disableAllLayers(){
+  camera.layers.disableAll()
+  render()
 }
 
 function createLights(){
@@ -121,9 +189,6 @@ function init() {
   window.addEventListener( 'resize', onWindowResize, false );
 }
 
-
-/* CREAR ELEMENTO INTERFAZ */
-
 function createGui(){
 
   mainGui = GUI.create()
@@ -146,29 +211,38 @@ function createGui(){
 
 }
 
-// !! No en su sitio
-function enableAllLayers(){
-  camera.layers.enableAll()
-  render()
-}
-// !! No en su sitio
-function disableAllLayers(){
-  camera.layers.disableAll()
-  render()
-}
-// !! No en su sitio
-function initPolygonCreation(){
-  container.addEventListener('click', newPolygonPoint)
-  container.addEventListener('keypress', saveCreatedPolygon)
-}
-// !! No en su sitio
-function stopPolygonCreation(){
-  container.removeEventListener('click', newPolygonPoint)
-  container.removeEventListener('keypress', saveCreatedPolygon)
+function loadProject(){
+  fetch('/api/project/'+pathProjectId)
+  .then( response => response.json() )
+  .then( project => {
+    console.log(`Project: ${project._id}`, project)
+
+    loadMeshes(project.meshes)
+    loadPolygons(project.polygons)
+  })
 }
 
-/* CARGAR MESH */
-function loadLayer(id,data){
+function loadMeshes(meshes){
+  for(let i=0; i<meshes.length; i++){ // En un for normal porque los layers deben tener numeros del 0 al 31 - https://threejs.org/docs/#api/en/core/Layers
+
+    let guiLayer = GUI.createBasic(`layer_${i}`, meshes[i].name, function(){
+      camera.layers.toggle( i )
+      render()
+    })
+    GUI.add(guiLayer,'#layers .gui__group__content')
+
+    loadSingleMesh(i,meshes[i])
+  }
+}
+
+function loadPolygons(polygons){
+  for( let polygon of polygons ){
+    addGUIPolygon(polygon)    
+    scene.add( generatePolygon(polygon.points) )
+  }
+}
+
+function loadSingleMesh(id,data){
   const api_loader = new GLTFLoader();
   
   // Las meshes estan comprimidas con DRACO para que pesen MUCHISIMO menos, pero se necesita el descodificador draco para cargarlas - https://threejs.org/docs/#examples/en/loaders/GLTFLoader
@@ -185,7 +259,6 @@ function loadLayer(id,data){
       console.log("Poner en la capa "+id)
       console.log("glb info: ", glb)
 
-      mesh = glb.scene
       scene.add(glb.scene)
 
       // Todos los hijos de la escena deben tener el layer, no vale con setear solamente la escena. traverse recorre todos los hijos
@@ -208,131 +281,181 @@ function loadLayer(id,data){
       console.log( 'An error happened',error );
     }
   );
-
 }
 
-function loadProject(){
+function addGUIPolygon(polygon){
+  // Creamos el elemento adecuado para poner en el GUI
+  let guiElement_options = {
+    edit:{
+      'name': 'Edit',
+      'image': '/styles/icons/menu_3puntosVertical.svg',
+      'event': function(){
+        console.log("Open element menu")
+        modals.modalEditPolygon(polygon)
+      }
+    }
+  }
+  if(polygon.link){
+    guiElement_options.openLink = {
+      'name': 'Open link',
+      'image': '/styles/icons/link.svg',
+      'event': function(){
+        console.log("Open link")
+        window.open(polygon.link, '_blank')
+      }
+    }
+  }
+  let guiElement = GUI.createBasic(`polygon_${polygon._id}`, polygon.name, function(){
+    // No usar capas para esto, solo hay 32 layers como tal en three. Remover y añadir los poligonos tal qual
+    console.log("Apagar este polygon")
+  }, guiElement_options )
+  // Añadimos el polígono generado a la escena
+  GUI.add(guiElement,'#polygons .gui__group__content')
+}
+
+
+/* Módulo de CONTROL de CREACIÓN/MODIFICACIÓN/BORRAción.. de los polígonos */
+const polygonModule = (function(){
+
+  let newPolygonVertices = []
+  let newPolygons = [] // Para poderlos borrar cuadno se cancela, hay que guardar la instancia en algun lado
+  let clickingPoints = [] // Para poderlos borrar cuando se cancela, hay que guardar la instancia en algun lado
   
-  fetch('/api/project/'+pathProjectId)
-  .then( response => {
-    return response.json()
-  })
-  .then( project => {
-    console.log(`Project: ${project._id}`, project)
+  function initPolygonCreation(){
+    container.addEventListener('click', newPolygonPoint)
+    container.addEventListener('keypress', saveCreatedPolygon)
+  }
+
+  function stopPolygonCreation(){
+    container.removeEventListener('click', newPolygonPoint)
+    container.removeEventListener('keypress', saveCreatedPolygon)
+  }
+  
+  function newPolygonPoint(event){
+  
+    const intersects = intersections(event.clientX, event.clientY)
+    let [px,py,pz] = [intersects[0].point.x, intersects[0].point.y, intersects[0].point.z]
     
-    let meshes = project.meshes;
-    let polygons = project.polygons;
-
-    // Cargar las meshes de la base de datos
-    for(let i=0; i<meshes.length; i++){ // En un for normal porque los layers deben tener numeros del 0 al 31 - https://threejs.org/docs/#api/en/core/Layers
-
-      let guiLayer = GUI.createBasic(`layer_${i}`, meshes[i].name, function(){
-        camera.layers.toggle( i )
-        render()
-      })
-      GUI.add(guiLayer,'#layers .gui__group__content')
-
-      loadLayer(i,meshes[i])
-    }
-
-    // Cargar los polígonos
-    // Como puede haber muchos poligonos, voy a reservar las capas 30 y 31 para puntos y polígonos (son las últimas ocupables)
-    // O al ser poca carga, los puedo quitar y añadir de la escena en vez de apagarlos
-    for( let polygon of polygons ){
-      
-      let optionsLayer = {
-        edit:{
-          'name': 'Edit',
-          'image': '/styles/icons/menu_3puntosVertical.svg',
-          'event': function(){
-            console.log("Open element menu")
-            // !! Todo esto por supuesto en una funcion aparte, pero ver bien como organizar
-            let editPolyModal = new Modal({
-              background: true,
-              id: 'editPolyModal'
-            })
-            editPolyModal.mount()
-            editPolyModal.addInput({ type:'text',id:'newName',name:'newName',value:polygon.name})
-            editPolyModal.addInput({ type:'text',id:'newLink',name:'newLink',value:polygon.link})
-            editPolyModal.addButton({ text:'Guardar cambios',color:'green',key:'Enter'}, () => {
-              fetch('/api/polygon/update',{
-                method:'POST',
-                body: JSON.stringify({
-                  id: polygon._id,
-                  name: document.querySelector('#newName').value,
-                  link: document.querySelector('#newLink').value,
-                }),
-                headers:{
-                  'Content-Type': 'application/json'
-                }
-              })
-              .then( res => res.json() )
-              .then( resp => {
-                console.log('Updated', resp)
-                editPolyModal.close()
-
-                // !! Update existent después de un buen refactoring, que ahora seguro repetiria cosas otra vez
-
-              })
-            })
-            editPolyModal.addButton({ text:'Borrar',color:'red' }, () => {
-              let confirmDelete = new Modal({
-                id: 'confirmDelete'
-              })
-              confirmDelete.mount()
-              confirmDelete.write('Seguro?')
-              confirmDelete.addButton({ text:'Si',color:'red',key:'Enter'}, () => {
-                fetch('/api/polygon/delete',{
-                  method:'POST',
-                  body: JSON.stringify({ id: polygon._id }),
-                  headers:{ 'Content-Type': 'application/json' }
-                })
-                .then( res => res.json() )
-                .then( resp => {
-                  console.log('Deleted', resp)
-                  editPolyModal.close()
-                  confirmDelete.close()
+    let point = createPoint()
+    clickingPoints.push(point)
+    scene.add(point)
+    point.position.set(px, py, pz)
   
-                  // !! Update existent después de un buen refactoring, que ahora seguro repetiria cosas otra vez
+    newPolygonVertices.push({x:px,y:py,z:pz})
   
-                })
-              })
-              confirmDelete.addButton({ text:'No',color:'green',key:'Escape'}, () => {
-                confirmDelete.close()
-              })
-            })
-            editPolyModal.addButton({ text:'Cancel' }, () => {
-              editPolyModal.close()
-            })
-          }
-        }
-      }
-      if(polygon.link){
-        optionsLayer.openLink = {
-          'name': 'Open link',
-          'image': '/styles/icons/link.svg',
-          'event': function(){
-            console.log("Open link")
-            window.open(polygon.link, '_blank')
-          }
-        }
-      }
-
-      let guiLayer = GUI.createBasic(`polygon_${polygon.id}`, polygon.name, function(){
-        // Intentar no usar capas para esto, solo hay 32 layers como tal en three
-        console.log("Apagar este polygon")
-      }, optionsLayer )
-      
-      GUI.add(guiLayer,'#polygons .gui__group__content')
-
-      scene.add( generatePolygon(polygon.points) )
-
+    if(newPolygonVertices.length >= 3){ 
+      let newPolygon = generatePolygon(newPolygonVertices)
+      newPolygons.push(newPolygon)   
+  
+      scene.add( newPolygon )
+      // !! Ver como No ir poniendo los polígonos uno encima de otro..
     }
-  })
-}
+    render()
+  }
+  
+  function saveCreatedPolygon(e){
+    if(e.key === "Enter"){
+      stopPolygonCreation()
+      modals.modalSavePolygon()
+    }
+  }
+  
+  function saveUpdatedPolygon(polygon){
+    fetch('/api/polygon/update',{
+      method:'POST',
+      body: JSON.stringify({
+        id: polygon._id,
+        name: document.querySelector('#newName').value,
+        link: document.querySelector('#newLink').value,
+      }),
+      headers:{
+        'Content-Type': 'application/json'
+      }
+    })
+    .then( res => res.json() )
+    .then( resp => {
+      console.log('Updated', resp)
+      
+      // !! Update existent después de un buen refactoring, que ahora seguro repetiria cosas otra vez
+    })
+  }
+  
+  function deletePolygon(polygon){
+    fetch('/api/polygon/delete',{
+      method:'POST',
+      body: JSON.stringify({ id: polygon._id }),
+      headers:{ 'Content-Type': 'application/json' }
+    })
+    .then( res => res.json() )
+    .then( resp => {
+      console.log('Deleted', resp)
 
+      // !! Update existent después de un buen refactoring, que ahora seguro repetiria cosas otra vez
+    })
+  }
+  
+  function savePolygonInfo(){
+    fetch('/api/polygon/save',{
+      method:'POST',
+      body: JSON.stringify({
+        project: pathProjectId,
+        points: newPolygonVertices,
+        name: document.querySelector('#polygonName').value,
+        link: document.querySelector('#polygonLink').value,
+        color: 'green'
+      }),
+      headers:{
+        'Content-Type': 'application/json'
+      }
+    })
+    .then( res => res.json() )
+    .then( resp => { 
+      addGUIPolygon(resp) 
+    })
+    .catch( error => console.error(error) )
+  }
+  
+  function cleanPolygonCreated(all){
+    if(all){
+      for(let polygon of newPolygons) scene.remove(polygon)
+      newPolygons = []
+    }
+    for(let point of clickingPoints) scene.remove(point)
+    newPolygonVertices = []
+    clickingPoints = []
+  }
 
-function generatePolygon(vertices){ //vertices es { x, y, z }
+  const intersections = (x,y) => {
+    mouse.x = (x / renderer.domElement.clientWidth ) * 2 - 1
+    mouse.y = - ( y / renderer.domElement.clientHeight ) * 2 + 1
+    raycaster.setFromCamera( mouse, camera )
+
+    return raycaster.intersectObjects(scene.children, true)
+  }
+
+  function createPoint(){
+    const ico = new THREE.IcosahedronGeometry(0.3)
+    const material = new THREE.MeshBasicMaterial( {color: 0xd9d9d9} )
+    const point = new THREE.Mesh( ico, material );
+
+    return point
+  }
+
+  return{
+    cleanPolygonCreated,
+    savePolygonInfo,
+    deletePolygon,
+    saveUpdatedPolygon,
+    initPolygonCreation
+  }
+})()
+
+/* HELPERS GENERALES */
+
+/* Genera un polígono three a partir de un array de objetos de vertices -> [{x:,y:,z:},] 
+  No añade el polígono a la escena, solo crea la geometria y la devuelve para ser usada 
+  Se usa durante la creación del polígono, pero tambien cuando se cargan todos los polígonos en la escena */
+function generatePolygon(vertices){ 
   let faces = []
   let geometry = new THREE.Geometry()
   let earcutVertices = []
@@ -362,166 +485,6 @@ function generatePolygon(vertices){ //vertices es { x, y, z }
   });
 
   let createdPolygon = new THREE.Mesh( geometry, geometrymaterial )
+
   return createdPolygon
-
-}
-
-
-
-
-/* DIBUJAR POLIGONOS */
-
-const intersections = (x,y) => {
-  mouse.x = (x / renderer.domElement.clientWidth ) * 2 - 1
-  mouse.y = - ( y / renderer.domElement.clientHeight ) * 2 + 1
-  raycaster.setFromCamera( mouse, camera )
-
-  return raycaster.intersectObjects(scene.children, true)
-}
-
-
-
-let newPolygonVertices = []
-let newPolygons = [] // Para poderlos borrar cuadno se cancela, hay que guardar la instancia en algun lado
-let clickingPoints = [] // Para poderlos borrar cuando se cancela, hay que guardar la instancia en algun lado
-
-function newPolygonPoint(event){
-
-  const intersects = intersections(event.clientX, event.clientY)
-  let [px,py,pz] = [intersects[0].point.x, intersects[0].point.y, intersects[0].point.z]
-  
-  let point = createPoint()
-  clickingPoints.push(point)
-  scene.add(point)
-  point.position.set(px, py, pz)
-
-  newPolygonVertices.push({x:px,y:py,z:pz})
-
-  if(newPolygonVertices.length >= 3){ 
-    let newPolygon = generatePolygon(newPolygonVertices)
-    newPolygons.push(newPolygon)   
-
-    scene.add( newPolygon )
-    // !! Ver como No ir poniendo los polígonos uno encima de otro..
-  }
-  render()
-
-}
-
-function createPoint(){
-  const ico = new THREE.IcosahedronGeometry(0.3)
-  const material = new THREE.MeshBasicMaterial( {color: 0xd9d9d9} )
-  const point = new THREE.Mesh( ico, material );
-
-  return point
-}
-
-function saveCreatedPolygon(e){
-
-  if(e.key === "Enter"){
-    
-    stopPolygonCreation()
-
-    console.log("End polygon")
-    let savePolygonModal = new Modal({
-      id:'savePolygon',
-      background: true
-    })
-    savePolygonModal.mount()
-    savePolygonModal.write('Polígono terminado<br>Puedes ponerle un nombre:')
-    savePolygonModal.addInput({
-      type: 'text',
-      id: 'polygonName',
-      name: 'polygonName',
-      placeholder: 'Nome',
-      focus: true
-    })
-    savePolygonModal.addInput({
-      type: 'text',
-      id: 'polygonLink',
-      name: 'polygonLink',
-      placeholder: 'link'
-    })
-    savePolygonModal.addButton({
-      text:'Save',
-      color:'green',
-      focus: false,
-      key: 'Enter'
-    }, function(){
-      fetch('/api/polygon/save',{
-        method:'POST',
-        body: JSON.stringify({
-          project: pathProjectId,
-          points: newPolygonVertices,
-          name: document.querySelector('#polygonName').value,
-          link: document.querySelector('#polygonLink').value,
-          color: 'green'
-        }),
-        headers:{
-          'Content-Type': 'application/json'
-        }
-      })
-      .then( res => res.json() )
-      .then( resp => {
-        
-        
-        
-        // Añadir poligono en gui y dejarlo bien, sin puntos en los vertices etc
-        // Podria añadirlo sin mas o recargar la lista
-        
-        // !! Esto está repetido de mas arriba. Hacer refactor de la creación de capas
-        let optionsLayer = {
-          edit:{
-            'name': 'Edit',
-            'image': '/styles/icons/menu_3puntosVertical.svg',
-            'event': function(){
-              console.log("Open element menu")
-            }
-          }
-        }
-        if(resp.link){
-          optionsLayer.openLink = {
-            'name': 'Open link',
-            'image': '/styles/icons/link.svg',
-            'event': function(){
-              console.log("Open link")
-              window.open(resp.link, '_blank')
-            }
-          }
-        }
-        let guiLayer = GUI.createBasic(`polygon_${resp._id}`, resp.name, function(){
-          // Intentar no usar capas para esto, solo hay 32 layers como tal en three
-          console.log("Apagar este polygon")
-        }, optionsLayer )
-        GUI.add(guiLayer,'#polygons .gui__group__content')
-
-
-        console.log('Added',resp)
-      })
-      .catch( error => console.error(error) )
-      
-      for(let point of clickingPoints) scene.remove(point)
-
-      newPolygonVertices = []
-      clickingPoints = []
-      console.log("Added polygons this session: ", newPolygons)
-      
-      savePolygonModal.close()
-      
-      render()
-    })
-    savePolygonModal.addButton({text:'Cancel',color:'red',focus:false}, function(){
-
-      for(let point of clickingPoints) scene.remove(point)
-      for(let polygon of newPolygons) scene.remove(polygon)
-      
-      newPolygonVertices = []
-      clickingPoints = []
-      newPolygons = []
-
-      savePolygonModal.close()
-      
-      render()
-    })
-  }
 }
