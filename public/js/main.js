@@ -258,18 +258,29 @@ function loadProject(){
               })
             })
             editPolyModal.addButton({ text:'Borrar',color:'red' }, () => {
-              fetch('/api/polygon/delete',{
-                method:'POST',
-                body: JSON.stringify({ id: polygon._id }),
-                headers:{ 'Content-Type': 'application/json' }
+              let confirmDelete = new Modal({
+                id: 'confirmDelete'
               })
-              .then( res => res.json() )
-              .then( resp => {
-                console.log('Deleted', resp)
-                editPolyModal.close()
-
-                // !! Update existent después de un buen refactoring, que ahora seguro repetiria cosas otra vez
-
+              confirmDelete.mount()
+              confirmDelete.write('Seguro?')
+              confirmDelete.addButton({ text:'Si',color:'red',key:'Enter'}, () => {
+                fetch('/api/polygon/delete',{
+                  method:'POST',
+                  body: JSON.stringify({ id: polygon._id }),
+                  headers:{ 'Content-Type': 'application/json' }
+                })
+                .then( res => res.json() )
+                .then( resp => {
+                  console.log('Deleted', resp)
+                  editPolyModal.close()
+                  confirmDelete.close()
+  
+                  // !! Update existent después de un buen refactoring, que ahora seguro repetiria cosas otra vez
+  
+                })
+              })
+              confirmDelete.addButton({ text:'No',color:'green',key:'Escape'}, () => {
+                confirmDelete.close()
               })
             })
             editPolyModal.addButton({ text:'Cancel' }, () => {

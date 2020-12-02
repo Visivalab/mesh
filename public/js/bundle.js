@@ -51898,19 +51898,38 @@ function loadProject() {
                 text: 'Borrar',
                 color: 'red'
               }, function () {
-                fetch('/api/polygon/delete', {
-                  method: 'POST',
-                  body: JSON.stringify({
-                    id: polygon._id
-                  }),
-                  headers: {
-                    'Content-Type': 'application/json'
-                  }
-                }).then(function (res) {
-                  return res.json();
-                }).then(function (resp) {
-                  console.log('Deleted', resp);
-                  editPolyModal.close(); // !! Update existent después de un buen refactoring, que ahora seguro repetiria cosas otra vez
+                var confirmDelete = new Modal({
+                  id: 'confirmDelete'
+                });
+                confirmDelete.mount();
+                confirmDelete.write('Seguro?');
+                confirmDelete.addButton({
+                  text: 'Si',
+                  color: 'red',
+                  key: 'Enter'
+                }, function () {
+                  fetch('/api/polygon/delete', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                      id: polygon._id
+                    }),
+                    headers: {
+                      'Content-Type': 'application/json'
+                    }
+                  }).then(function (res) {
+                    return res.json();
+                  }).then(function (resp) {
+                    console.log('Deleted', resp);
+                    editPolyModal.close();
+                    confirmDelete.close(); // !! Update existent después de un buen refactoring, que ahora seguro repetiria cosas otra vez
+                  });
+                });
+                confirmDelete.addButton({
+                  text: 'No',
+                  color: 'green',
+                  key: 'Escape'
+                }, function () {
+                  confirmDelete.close();
                 });
               });
               editPolyModal.addButton({
