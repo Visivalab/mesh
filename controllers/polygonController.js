@@ -7,6 +7,7 @@ exports.savePolygon = async function(req,res){
   const newPolygon = new Polygon({
     name: req.body.name,
     color: req.body.color,
+    link: req.body.link,
     points: req.body.points
   })
   newPolygon.save()

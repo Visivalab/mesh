@@ -7,7 +7,7 @@ export const GUI = (function(){
     return gui
   }
 
-  function createBasic(id,name,callback = null){
+  function createBasic(id,name,callback = null, options = false){
     let layer = document.createElement('div')
     layer.className = 'gui__element'
     layer.id = id
@@ -15,10 +15,25 @@ export const GUI = (function(){
     
     let info = document.createElement('div')
     info.className = 'gui__element__info'
+  
+    if(options){
+      for(let option in options){
+        let buttonEdit = document.createElement('div')
+        buttonEdit.className = 'gui__element__option'
+        buttonEdit.title = options[option].name
+        buttonEdit.style.backgroundImage = `url(${options[option].image})`
+        buttonEdit.addEventListener('click', e => {
+          e.stopPropagation()
+          options[option].event()
+        })
+        info.appendChild(buttonEdit)
+      }
+    }
+
     layer.appendChild(info)
   
     layer.addEventListener('click', callback)
-  
+
     return layer
   }
 

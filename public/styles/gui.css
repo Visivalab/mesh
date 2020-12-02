@@ -9,11 +9,6 @@
   background-color: white;
   box-shadow: 0px 0px 10px 0px rgba(0,0,0,0.1);
 
-  font-family: 'Raleway';
-  font-weight: 300;
-  font-size: 1rem;
-  color: rgb(34, 34, 34);
-
   --sides_spacing: 20px;
 }
 .gui__separator{
@@ -88,10 +83,22 @@
 }
 .gui__element{
   display: flex;
-  padding: 10px var(--sides_spacing);
+  padding: 10px 10px 10px var(--sides_spacing);
   box-sizing: border-box;
   cursor: pointer;
 }
 .gui__element__info{
   margin-left: auto;
+  display: flex;
+  justify-content: flex-end;
+}
+.gui__element__option{
+  width: 20px;
+  height: 20px;
+  background: no-repeat center/15px;
+}
+.gui__element__link{
+  width: 20px;
+  height: 20px;
+  background: no-repeat center/15px;
 }

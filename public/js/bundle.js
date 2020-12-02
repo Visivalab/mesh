@@ -45763,12 +45763,32 @@ var GUI = function () {
 
   function createBasic(id, name) {
     var callback = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
+    var options = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : false;
     var layer = document.createElement('div');
     layer.className = 'gui__element';
     layer.id = id;
     layer.textContent = name;
     var info = document.createElement('div');
     info.className = 'gui__element__info';
+
+    if (options) {
+      var _loop = function _loop(option) {
+        var buttonEdit = document.createElement('div');
+        buttonEdit.className = 'gui__element__option';
+        buttonEdit.title = options[option].name;
+        buttonEdit.style.backgroundImage = "url(".concat(options[option].image, ")");
+        buttonEdit.addEventListener('click', function (e) {
+          e.stopPropagation();
+          options[option].event();
+        });
+        info.appendChild(buttonEdit);
+      };
+
+      for (var option in options) {
+        _loop(option);
+      }
+    }
+
     layer.appendChild(info);
     layer.addEventListener('click', callback);
     return layer;
@@ -51823,15 +51843,35 @@ function loadProject() {
         _step;
 
     try {
-      for (_iterator.s(); !(_step = _iterator.n()).done;) {
+      var _loop2 = function _loop2() {
         var polygon = _step.value;
         console.log(polygon);
         var guiLayer = GUI.createBasic("polygon_".concat(polygon.id), polygon.name, function () {
           // Intentar no usar capas para esto, solo hay 32 layers como tal en three
           console.log("Apagar este polygon");
+        }, {
+          edit: {
+            'name': 'Edit',
+            'image': '/styles/icons/menu_3puntosVertical.svg',
+            'event': function event() {
+              console.log("Open element menu");
+            }
+          },
+          openLink: {
+            'name': 'Open link',
+            'image': '/styles/icons/link.svg',
+            'event': function event() {
+              console.log("Open link");
+              window.open(polygon.link, '_blank');
+            }
+          }
         });
         GUI.add(guiLayer, '#polygons .gui__group__content');
         scene.add(generatePolygon(polygon.points));
+      };
+
+      for (_iterator.s(); !(_step = _iterator.n()).done;) {
+        _loop2();
       }
     } catch (err) {
       _iterator.e(err);
@@ -51955,6 +51995,12 @@ function keyPress(e) {
       placeholder: 'Nome',
       focus: true
     });
+    savePolygonModal.addInput({
+      type: 'text',
+      id: 'polygonLink',
+      name: 'polygonLink',
+      placeholder: 'link'
+    });
     savePolygonModal.addButton({
       text: 'Save',
       color: 'green',
@@ -51967,6 +52013,7 @@ function keyPress(e) {
           project: pathProjectId,
           points: newPolygonVertices,
           name: document.querySelector('#polygonName').value,
+          link: document.querySelector('#polygonLink').value,
           color: 'green'
         }),
         headers: {
@@ -51975,18 +52022,19 @@ function keyPress(e) {
       }).then(function (res) {
         return res.json();
       }).then(function (resp) {
+        // Añadir poligono en gui y dejarlo bien, sin puntos en los vertices etc
+        // Podria añadirlo sin mas o recargar la lista
+        // Esto está repetido de mas arriba
+        var guiLayer = GUI.createBasic("polygon_".concat(resp._id), resp.name, function () {
+          // Intentar no usar capas para esto, solo hay 32 layers como tal en three
+          console.log("Apagar este polygon");
+        });
+        GUI.add(guiLayer, '#polygons .gui__group__content');
         console.log('Added', resp);
       }).catch(function (error) {
         return console.error(error);
       });
-      newPolygonVertices = [];
-      savePolygonModal.close();
-    });
-    savePolygonModal.addButton({
-      text: 'Cancel',
-      color: 'red',
-      focus: false
-    }, function () {
+
       var _iterator3 = _createForOfIteratorHelper(clickingPoints),
           _step3;
 
@@ -52001,18 +52049,43 @@ function keyPress(e) {
         _iterator3.f();
       }
 
-      var _iterator4 = _createForOfIteratorHelper(newPolygons),
+      newPolygonVertices = [];
+      clickingPoints = [];
+      console.log("Added polygons this session: ", newPolygons);
+      savePolygonModal.close();
+      render();
+    });
+    savePolygonModal.addButton({
+      text: 'Cancel',
+      color: 'red',
+      focus: false
+    }, function () {
+      var _iterator4 = _createForOfIteratorHelper(clickingPoints),
           _step4;
 
       try {
         for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
-          var polygon = _step4.value;
-          scene.remove(polygon);
+          var point = _step4.value;
+          scene.remove(point);
         }
       } catch (err) {
         _iterator4.e(err);
       } finally {
         _iterator4.f();
+      }
+
+      var _iterator5 = _createForOfIteratorHelper(newPolygons),
+          _step5;
+
+      try {
+        for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
+          var polygon = _step5.value;
+          scene.remove(polygon);
+        }
+      } catch (err) {
+        _iterator5.e(err);
+      } finally {
+        _iterator5.f();
       }
 
       newPolygonVertices = [];

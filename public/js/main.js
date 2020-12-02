@@ -226,7 +226,24 @@ function loadProject(){
       let guiLayer = GUI.createBasic(`polygon_${polygon.id}`, polygon.name, function(){
         // Intentar no usar capas para esto, solo hay 32 layers como tal en three
         console.log("Apagar este polygon")
+      }, {
+        edit: {
+          'name': 'Edit',
+          'image': '/styles/icons/menu_3puntosVertical.svg',
+          'event': function(){
+            console.log("Open element menu")
+          }
+        },
+        openLink: {
+          'name': 'Open link',
+          'image': '/styles/icons/link.svg',
+          'event': function(){
+            console.log("Open link")
+            window.open(polygon.link, '_blank')
+          }
+        }
       })
+      
       GUI.add(guiLayer,'#polygons .gui__group__content')
 
       scene.add( generatePolygon(polygon.points) )
@@ -342,6 +359,12 @@ function keyPress(e){
       placeholder: 'Nome',
       focus: true
     })
+    savePolygonModal.addInput({
+      type: 'text',
+      id: 'polygonLink',
+      name: 'polygonLink',
+      placeholder: 'link'
+    })
     savePolygonModal.addButton({
       text:'Save',
       color:'green',
@@ -354,6 +377,7 @@ function keyPress(e){
           project: pathProjectId,
           points: newPolygonVertices,
           name: document.querySelector('#polygonName').value,
+          link: document.querySelector('#polygonLink').value,
           color: 'green'
         }),
         headers:{
@@ -362,12 +386,33 @@ function keyPress(e){
       })
       .then( res => res.json() )
       .then( resp => {
+        
+        
+        
+        // Añadir poligono en gui y dejarlo bien, sin puntos en los vertices etc
+        // Podria añadirlo sin mas o recargar la lista
+        
+        // Esto está repetido de mas arriba
+        let guiLayer = GUI.createBasic(`polygon_${resp._id}`, resp.name, function(){
+          // Intentar no usar capas para esto, solo hay 32 layers como tal en three
+          console.log("Apagar este polygon")
+        })
+        GUI.add(guiLayer,'#polygons .gui__group__content')
+
+
         console.log('Added',resp)
       })
       .catch( error => console.error(error) )
       
+      for(let point of clickingPoints) scene.remove(point)
+
       newPolygonVertices = []
+      clickingPoints = []
+      console.log("Added polygons this session: ", newPolygons)
+      
       savePolygonModal.close()
+      
+      render()
     })
     savePolygonModal.addButton({text:'Cancel',color:'red',focus:false}, function(){
 

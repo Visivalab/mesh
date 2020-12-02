@@ -27,6 +27,7 @@ app.set('view engine', 'pug')
 // Configurar accesos a elementos estáticos
 //app.use(cors())
 app.use('/public', express.static('public'))
+app.use('/styles', express.static('public/styles'))
 app.use('/draco', express.static('node_modules/three/examples/js/libs/draco/gltf')) // Los decoders de draco se tienen que cojer directamente del módulo de three 🤷🏻‍♂️
 app.use('/bulma', express.static('node_modules/bulma'))
 

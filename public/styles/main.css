@@ -1,6 +1,9 @@
 html,body{
-    margin:0;
-    font-size:14px
+  margin:0;
+  font-size:14px;
+  font-family: 'Raleway';
+  font-weight: 300;
+  color: rgb(34, 34, 34);
 }
 p{
   margin: 0;
