@@ -51666,10 +51666,14 @@ DRACOLoader.getDecoderModule = function () {
 };
 
 var renderer, scene, camera, controls, ambientLight;
-var container, mainGui;
-var pathProjectId = window.location.pathname.split('/').pop();
 var raycaster = new Raycaster();
-var mouse = new Vector2(); // Objeto que define la creación de cada modal, para poder encontrarlo y editarlo facilmente
+var mouse = new Vector2(); // Variables globales para elementos de la interfaz que se necesitan a menudo
+
+var container, mainGui; // Variables globales donde guardar un array con los objetos en escena, para poder verlos y modificarlos siempre
+
+var scenePolygons = {}; // Variable global para guardar el id del proyecto, que viene en la url
+
+var pathProjectId = window.location.pathname.split('/').pop(); // Objeto que define la creación de cada modal, para poder encontrarla y editarla facilmente
 // No estoy muy seguro de la utilidad o practicidad real de esto
 // Además no puedo modificar o cerrar las modales desde otro lado porque no estan definidas fuera de este scope, que tampoco es del todo malo.
 
@@ -51680,7 +51684,7 @@ var modals = {
       background: true
     });
     modalNewPolygon.mount();
-    modalNewPolygon.write('<strong>Pulsa el ratón</strong> para crear el polígono.<br>Cuando termines, <strong>pulsa enter</strong>.');
+    modalNewPolygon.write('<strong>Click</strong> to create the polygon.<br>When done, <strong>hit enter</strong>.');
     modalNewPolygon.addButton({
       text: 'Ok',
       color: 'green',
@@ -51716,7 +51720,7 @@ var modals = {
       value: polygon.link
     });
     editPolyModal.addButton({
-      text: 'Guardar cambios',
+      text: 'Save changes',
       color: 'green',
       key: 'Enter'
     }, function () {
@@ -51724,7 +51728,7 @@ var modals = {
       editPolyModal.close();
     });
     editPolyModal.addButton({
-      text: 'Borrar',
+      text: 'Delete',
       color: 'red'
     }, function () {
       modals.modalConfirmDeletePolygon(polygon);
@@ -51740,14 +51744,17 @@ var modals = {
       id: 'confirmDelete'
     });
     confirmDelete.mount();
-    confirmDelete.write('Seguro?');
+    confirmDelete.write('Sure?');
     confirmDelete.addButton({
-      text: 'Si',
+      text: 'Yes',
       color: 'red',
       key: 'Enter'
     }, function () {
       polygonModule.deletePolygon(polygon);
-      confirmDelete.close();
+      confirmDelete.close(); // !! Esto está así porqué no está referenciada la otra modal en ningun lado que pueda ir desde aquí
+
+      document.querySelector('#editPolyModal').remove();
+      document.querySelector('.modal__background').remove();
     });
     confirmDelete.addButton({
       text: 'No',
@@ -51928,7 +51935,9 @@ function loadPolygons(polygons) {
     for (_iterator.s(); !(_step = _iterator.n()).done;) {
       var polygon = _step.value;
       addGUIPolygon(polygon);
-      scene.add(generatePolygon(polygon.points));
+      var geometry = generatePolygon(polygon.points);
+      scene.add(geometry);
+      scenePolygons[polygon._id] = geometry;
     }
   } catch (err) {
     _iterator.e(err);
@@ -51945,8 +51954,8 @@ function loadSingleMesh(id, data) {
 
   api_loader.setDRACOLoader(dracoLoader); // Carga elementos de aws que agarra de la base de datos
 
-  api_loader.load( //data.url, 
-  '/public/meshes/teatro_decimated.glb', function (glb) {
+  api_loader.load('/public/meshes/teatro_decimated.glb', //data.url,
+  function (glb) {
     console.group('Loading layer');
     console.log("DB layer info: ", data);
     console.log("Poner en la capa " + id);
@@ -52065,7 +52074,12 @@ var polygonModule = function () {
     }).then(function (res) {
       return res.json();
     }).then(function (resp) {
-      console.log('Updated', resp); // !! Update existent después de un buen refactoring, que ahora seguro repetiria cosas otra vez
+      console.log('Updated', resp); // !! Se coje tal cual. Molaria hacerlo con una funcion propia del GUI. Habria que pensar el gui como el modal, como un constructor con sus cosas propias
+
+      document.querySelector("#polygon_".concat(resp._id)).remove(); // !! No hay manera logica o facil de actualizar la capa existente ahora mismo. La solucion rapida es borrarla y meter una nueva
+      // El problema es que se pone al final siempre claro
+
+      addGUIPolygon(resp);
     });
   }
 
@@ -52081,7 +52095,11 @@ var polygonModule = function () {
     }).then(function (res) {
       return res.json();
     }).then(function (resp) {
-      console.log('Deleted', resp); // !! Update existent después de un buen refactoring, que ahora seguro repetiria cosas otra vez
+      console.log('Deleted', resp); // !! Se coje tal cual. Molaria hacerlo con una funcion propia del GUI. Habria que pensar el gui como el modal, como un constructor con sus cosas propias
+
+      document.querySelector("#polygon_".concat(resp._id)).remove();
+      scene.remove(scenePolygons[resp._id]);
+      render();
     });
   }
 

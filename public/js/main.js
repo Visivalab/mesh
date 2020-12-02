@@ -1,21 +1,26 @@
 import * as THREE from 'three'; // https://threejs.org/docs/#api/en/loaders/Loader
 import earcut from 'earcut';
 import {GUI} from './gui';
-import {Modal} from './modal'
+import {Modal} from './modal';
 
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader';
 
+// Variables globales de threejs
 let renderer, scene, camera, controls, ambientLight;
-let container, mainGui;
-
-let pathProjectId = window.location.pathname.split('/').pop()
-
 const raycaster = new THREE.Raycaster()
 const mouse = new THREE.Vector2()
 
-// Objeto que define la creación de cada modal, para poder encontrarlo y editarlo facilmente
+// Variables globales para elementos de la interfaz que se necesitan a menudo
+let container, mainGui;
+// Variables globales donde guardar un array con los objetos en escena, para poder verlos y modificarlos siempre
+let scenePolygons = {};
+// Variable global para guardar el id del proyecto, que viene en la url
+let pathProjectId = window.location.pathname.split('/').pop()
+
+
+// Objeto que define la creación de cada modal, para poder encontrarla y editarla facilmente
 // No estoy muy seguro de la utilidad o practicidad real de esto
 // Además no puedo modificar o cerrar las modales desde otro lado porque no estan definidas fuera de este scope, que tampoco es del todo malo.
 const modals = {
@@ -25,7 +30,7 @@ const modals = {
       background: true
     })
     modalNewPolygon.mount()
-    modalNewPolygon.write('<strong>Pulsa el ratón</strong> para crear el polígono.<br>Cuando termines, <strong>pulsa enter</strong>.')
+    modalNewPolygon.write('<strong>Click</strong> to create the polygon.<br>When done, <strong>hit enter</strong>.')
     modalNewPolygon.addButton({text:'Ok',color:'green',focus:true}, function(){
       polygonModule.initPolygonCreation()
       modalNewPolygon.close()
@@ -42,11 +47,11 @@ const modals = {
     editPolyModal.mount()
     editPolyModal.addInput({ type:'text',id:'newName',name:'newName',value:polygon.name})
     editPolyModal.addInput({ type:'text',id:'newLink',name:'newLink',value:polygon.link})
-    editPolyModal.addButton({ text:'Guardar cambios',color:'green',key:'Enter'}, () => {
+    editPolyModal.addButton({ text:'Save changes',color:'green',key:'Enter'}, () => {
       polygonModule.saveUpdatedPolygon(polygon)
       editPolyModal.close()
     })
-    editPolyModal.addButton({ text:'Borrar',color:'red' }, () => {
+    editPolyModal.addButton({ text:'Delete',color:'red' }, () => {
       modals.modalConfirmDeletePolygon(polygon)
     })
     editPolyModal.addButton({ text:'Cancel' }, () => {
@@ -58,10 +63,14 @@ const modals = {
       id: 'confirmDelete'
     })
     confirmDelete.mount()
-    confirmDelete.write('Seguro?')
-    confirmDelete.addButton({ text:'Si',color:'red',key:'Enter' }, () => {
+    confirmDelete.write('Sure?')
+    confirmDelete.addButton({ text:'Yes',color:'red',key:'Enter' }, () => {
       polygonModule.deletePolygon(polygon)
       confirmDelete.close()
+      // !! Esto está así porqué no está referenciada la otra modal en ningun lado que pueda ir desde aquí
+      document.querySelector('#editPolyModal').remove()
+      document.querySelector('.modal__background').remove()
+      
     })
     confirmDelete.addButton({ text:'No',color:'green',key:'Escape' }, () => {
       confirmDelete.close()
@@ -237,8 +246,10 @@ function loadMeshes(meshes){
 
 function loadPolygons(polygons){
   for( let polygon of polygons ){
-    addGUIPolygon(polygon)    
-    scene.add( generatePolygon(polygon.points) )
+    addGUIPolygon(polygon)
+    let geometry = generatePolygon(polygon.points)
+    scene.add( geometry )
+    scenePolygons[polygon._id] = geometry
   }
 }
 
@@ -250,9 +261,10 @@ function loadSingleMesh(id,data){
   dracoLoader.setDecoderPath('/draco/'); // Para incluir los decoders hay definida una ruta en main.js a su carpeta dentro del module three de node_modules
   api_loader.setDRACOLoader(dracoLoader); // Carga elementos de aws que agarra de la base de datos
 
+  
   api_loader.load(
-    //data.url, 
     '/public/meshes/teatro_decimated.glb',
+    //data.url,
     function(glb){
       console.group('Loading layer')
       console.log("DB layer info: ", data)
@@ -376,7 +388,11 @@ const polygonModule = (function(){
     .then( resp => {
       console.log('Updated', resp)
       
-      // !! Update existent después de un buen refactoring, que ahora seguro repetiria cosas otra vez
+      // !! Se coje tal cual. Molaria hacerlo con una funcion propia del GUI. Habria que pensar el gui como el modal, como un constructor con sus cosas propias
+      document.querySelector(`#polygon_${resp._id}`).remove()
+      // !! No hay manera logica o facil de actualizar la capa existente ahora mismo. La solucion rapida es borrarla y meter una nueva
+      // El problema es que se pone al final siempre claro
+      addGUIPolygon(resp)
     })
   }
   
@@ -389,8 +405,12 @@ const polygonModule = (function(){
     .then( res => res.json() )
     .then( resp => {
       console.log('Deleted', resp)
+      
+      // !! Se coje tal cual. Molaria hacerlo con una funcion propia del GUI. Habria que pensar el gui como el modal, como un constructor con sus cosas propias
+      document.querySelector(`#polygon_${resp._id}`).remove()
 
-      // !! Update existent después de un buen refactoring, que ahora seguro repetiria cosas otra vez
+      scene.remove(scenePolygons[resp._id])
+      render()
     })
   }
   
