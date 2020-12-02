@@ -52084,6 +52084,7 @@ var polygonModule = function () {
   }
 
   function deletePolygon(polygon) {
+    // !! Cuidado, se esta borrando el poligono pero no se está quitando de la lista de poligonos del proyecto
     fetch('/api/polygon/delete', {
       method: 'POST',
       body: JSON.stringify({
@@ -52097,7 +52098,8 @@ var polygonModule = function () {
     }).then(function (resp) {
       console.log('Deleted', resp); // !! Se coje tal cual. Molaria hacerlo con una funcion propia del GUI. Habria que pensar el gui como el modal, como un constructor con sus cosas propias
 
-      document.querySelector("#polygon_".concat(resp._id)).remove();
+      document.querySelector("#polygon_".concat(resp._id)).remove(); // !! Hay que quitarlo tambien del objeto scenePolygons
+
       scene.remove(scenePolygons[resp._id]);
       render();
     });
