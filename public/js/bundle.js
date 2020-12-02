@@ -45813,7 +45813,10 @@ var GUI = function () {
     var button = document.createElement('div');
     button.className = 'gui__button ' + extraClass;
     button.style.backgroundImage = "url(".concat(icon, ")");
-    button.addEventListener('click', action);
+    button.addEventListener('click', function (e) {
+      e.stopPropagation();
+      action();
+    });
     return button;
   }
 
@@ -51667,7 +51670,33 @@ var container, mainGui;
 var mesh;
 var pathProjectId = window.location.pathname.split('/').pop();
 var raycaster = new Raycaster();
-var mouse = new Vector2();
+var mouse = new Vector2(); // Objeto que define la creación de cada modal, para poder encontrarlo y editarlo facilmente
+
+var modals = {
+  'modalNewPolygon': function modalNewPolygon() {
+    var modalNewPolygon = new Modal({
+      id: 'modalNewPolygon',
+      background: true
+    });
+    modalNewPolygon.mount();
+    modalNewPolygon.write('<strong>Pulsa el ratón</strong> para crear el polígono.<br>Cuando termines, <strong>pulsa enter</strong>.');
+    modalNewPolygon.addButton({
+      text: 'Ok',
+      color: 'green',
+      focus: true
+    }, function () {
+      initPolygonCreation();
+      modalNewPolygon.close();
+    });
+    modalNewPolygon.addButton({
+      text: 'Cancel',
+      color: 'red',
+      focus: false
+    }, function () {
+      modalNewPolygon.close();
+    });
+  }
+};
 init();
 
 function createCamera() {
@@ -51718,18 +51747,20 @@ function render() {
 }
 
 function init() {
-  container = document.querySelector('#viewer');
-  container.addEventListener('click', mouseClick, false);
-  container.addEventListener('keypress', keyPress); //Crear la escena con su background bien bonito
+  container = document.querySelector('#viewer'); //Crear la escena con su background bien bonito
 
   scene = new Scene();
-  scene.background = new Color(0xbfe3dd);
+  scene.background = new Color(0xbfe3dd); // Configuraciones de three
+
   createCamera();
   createLights();
   createRenderer();
-  setControls();
-  createGui();
-  loadProject();
+  setControls(); // Creación de la interfaz. Hay que crearla antes de cargar el proyecto porque se ponen los layers cargados dentro de ella
+
+  createGui(); // Carga de los modelos, polígonos, y todo lo que pueda tener el proyecto mas adelante
+
+  loadProject(); // Renderizar la escena creada
+
   render();
   window.addEventListener('resize', onWindowResize, false);
 }
@@ -51741,45 +51772,40 @@ function createGui() {
   var defaultOptions = GUI.createGroup('defaultOptions');
   var layersGroup = GUI.createGroup('layers', 'Layers', true, true);
   var polygonsGroup = GUI.createGroup('polygons', 'Polygons', true, true);
-  var addPolygonsButton = GUI.createButton('/public/styles/icons/plus_cross.svg', 'gui__button--rounded', function (e) {
-    e.stopPropagation();
-    var modalNewPolygon = new Modal({
-      id: 'modall',
-      background: true
-    });
-    modalNewPolygon.mount();
-    modalNewPolygon.write('<strong>Pulsa el ratón</strong> para crear el polígono.<br>Cuando termines, <strong>pulsa enter</strong>.');
-    modalNewPolygon.addButton({
-      text: 'Ok',
-      color: 'green',
-      focus: true
-    }, function () {
-      drawing = true;
-      modalNewPolygon.close();
-    });
-    modalNewPolygon.addButton({
-      text: 'Cancel',
-      color: 'red',
-      focus: false
-    }, function () {
-      modalNewPolygon.close();
-    });
-  });
-  GUI.add(GUI.createBasic('enableAll', 'Enable all', function () {
-    camera.layers.enableAll();
-    render();
-  }), defaultOptions);
-  GUI.add(GUI.createBasic('disableAll', 'Disable all', function () {
-    camera.layers.disableAll();
-    render();
-  }), defaultOptions);
+  var addPolygonsButton = GUI.createButton('/public/styles/icons/plus_cross.svg', 'gui__button--rounded', modals.modalNewPolygon);
   GUI.add(layersGroup, mainGui);
   GUI.add(GUI.createSeparator('space'), mainGui);
   GUI.add(addPolygonsButton, polygonsGroup);
   GUI.add(polygonsGroup, mainGui);
   GUI.add(GUI.createSeparator('line'), mainGui);
+  GUI.add(GUI.createBasic('enableAll', 'Enable all', enableAllLayers), defaultOptions);
+  GUI.add(GUI.createBasic('disableAll', 'Disable all', disableAllLayers), defaultOptions);
   GUI.add(defaultOptions, mainGui);
   document.querySelector('body').appendChild(mainGui);
+} // !! No en su sitio
+
+
+function enableAllLayers() {
+  camera.layers.enableAll();
+  render();
+} // !! No en su sitio
+
+
+function disableAllLayers() {
+  camera.layers.disableAll();
+  render();
+} // !! No en su sitio
+
+
+function initPolygonCreation() {
+  container.addEventListener('click', newPolygonPoint);
+  container.addEventListener('keypress', saveCreatedPolygon);
+} // !! No en su sitio
+
+
+function stopPolygonCreation() {
+  container.removeEventListener('click', newPolygonPoint);
+  container.removeEventListener('keypress', saveCreatedPolygon);
 }
 /* CARGAR MESH */
 
@@ -52016,8 +52042,6 @@ function generatePolygon(vertices) {
 /* DIBUJAR POLIGONOS */
 
 
-var drawing = false;
-
 var intersections = function intersections(x, y) {
   mouse.x = x / renderer.domElement.clientWidth * 2 - 1;
   mouse.y = -(y / renderer.domElement.clientHeight) * 2 + 1;
@@ -52029,10 +52053,8 @@ var newPolygonVertices = [];
 var newPolygons = []; // Para poderlos borrar cuadno se cancela, hay que guardar la instancia en algun lado
 
 var clickingPoints = []; // Para poderlos borrar cuando se cancela, hay que guardar la instancia en algun lado
-// !! Cambiar nombre de mouseClick y keyPress para que se sepa qué hacen
 
-function mouseClick(event) {
-  if (drawing === false) return;
+function newPolygonPoint(event) {
   var intersects = intersections(event.clientX, event.clientY);
   var _ref = [intersects[0].point.x, intersects[0].point.y, intersects[0].point.z],
       px = _ref[0],
@@ -52066,11 +52088,9 @@ function createPoint() {
   return point;
 }
 
-function keyPress(e) {
-  if (drawing === false) return;
-
+function saveCreatedPolygon(e) {
   if (e.key === "Enter") {
-    drawing = false;
+    stopPolygonCreation();
     console.log("End polygon");
     var savePolygonModal = new Modal({
       id: 'savePolygon',

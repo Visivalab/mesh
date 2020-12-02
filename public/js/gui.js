@@ -52,7 +52,10 @@ export const GUI = (function(){
     button.className = 'gui__button '+extraClass
     button.style.backgroundImage = `url(${icon})`
     
-    button.addEventListener('click', action)
+    button.addEventListener('click', (e) => {
+      e.stopPropagation()
+      action()
+    })
 
     return button
   }

@@ -16,6 +16,25 @@ let pathProjectId = window.location.pathname.split('/').pop()
 const raycaster = new THREE.Raycaster()
 const mouse = new THREE.Vector2()
 
+// Objeto que define la creación de cada modal, para poder encontrarlo y editarlo facilmente
+const modals = {
+  'modalNewPolygon': function(){
+    let modalNewPolygon = new Modal({
+      id: 'modalNewPolygon',
+      background: true
+    })
+    modalNewPolygon.mount()
+    modalNewPolygon.write('<strong>Pulsa el ratón</strong> para crear el polígono.<br>Cuando termines, <strong>pulsa enter</strong>.')
+    modalNewPolygon.addButton({text:'Ok',color:'green',focus:true}, function(){
+      initPolygonCreation()
+      modalNewPolygon.close()
+    })
+    modalNewPolygon.addButton({text:'Cancel',color:'red',focus:false}, function(){
+      modalNewPolygon.close()
+    })
+  }
+}
+
 init();
 
 function createCamera(){
@@ -78,26 +97,30 @@ function render() {
 function init() {
 
   container = document.querySelector('#viewer')
-  
-  container.addEventListener('click', mouseClick, false)
-  container.addEventListener('keypress', keyPress)
-
 
   //Crear la escena con su background bien bonito
   scene = new THREE.Scene();
   scene.background = new THREE.Color( 0xbfe3dd );
 
+  // Configuraciones de three
   createCamera();
   createLights();
   createRenderer();
   setControls();
-  createGui()
-  loadProject();
 
+  // Creación de la interfaz. Hay que crearla antes de cargar el proyecto porque se ponen los layers cargados dentro de ella
+  createGui();
+  
+  // Carga de los modelos, polígonos, y todo lo que pueda tener el proyecto mas adelante
+  loadProject();
+  
+  // Renderizar la escena creada
   render();
   
+
   window.addEventListener( 'resize', onWindowResize, false );
 }
+
 
 /* CREAR ELEMENTO INTERFAZ */
 
@@ -108,45 +131,40 @@ function createGui(){
   let defaultOptions = GUI.createGroup('defaultOptions')
   let layersGroup = GUI.createGroup('layers','Layers',true,true)
   let polygonsGroup = GUI.createGroup('polygons','Polygons',true,true)
-  let addPolygonsButton = GUI.createButton( '/public/styles/icons/plus_cross.svg','gui__button--rounded', function(e){
-    e.stopPropagation()
-    
-    let modalNewPolygon = new Modal({
-      id: 'modall',
-      background: true
-    })
-    modalNewPolygon.mount()
-    modalNewPolygon.write('<strong>Pulsa el ratón</strong> para crear el polígono.<br>Cuando termines, <strong>pulsa enter</strong>.')
-    modalNewPolygon.addButton({text:'Ok',color:'green',focus:true}, function(){
-      
-      drawing = true;
-      modalNewPolygon.close()
-    
-    })
-    modalNewPolygon.addButton({text:'Cancel',color:'red',focus:false}, function(){
-      modalNewPolygon.close()
-    })
-  })
+  let addPolygonsButton = GUI.createButton( '/public/styles/icons/plus_cross.svg','gui__button--rounded', modals.modalNewPolygon )
   
-  GUI.add( GUI.createBasic('enableAll','Enable all', function(){
-    camera.layers.enableAll()
-    render()
-  }), defaultOptions)
-
-  GUI.add( GUI.createBasic('disableAll','Disable all', function(){
-    camera.layers.disableAll()
-    render()
-  }), defaultOptions)
-
-  GUI.add(layersGroup, mainGui)
-  GUI.add(GUI.createSeparator('space'), mainGui)
-  GUI.add(addPolygonsButton, polygonsGroup)
-  GUI.add(polygonsGroup, mainGui)
-  GUI.add(GUI.createSeparator('line'), mainGui)
-  GUI.add(defaultOptions, mainGui)
+  GUI.add( layersGroup, mainGui )
+  GUI.add( GUI.createSeparator('space'), mainGui )
+  GUI.add( addPolygonsButton, polygonsGroup )
+  GUI.add( polygonsGroup, mainGui )
+  GUI.add( GUI.createSeparator('line'), mainGui )
+  GUI.add( GUI.createBasic('enableAll','Enable all', enableAllLayers), defaultOptions )
+  GUI.add( GUI.createBasic('disableAll','Disable all', disableAllLayers), defaultOptions )
+  GUI.add( defaultOptions, mainGui )
 
   document.querySelector('body').appendChild( mainGui );
 
+}
+
+// !! No en su sitio
+function enableAllLayers(){
+  camera.layers.enableAll()
+  render()
+}
+// !! No en su sitio
+function disableAllLayers(){
+  camera.layers.disableAll()
+  render()
+}
+// !! No en su sitio
+function initPolygonCreation(){
+  container.addEventListener('click', newPolygonPoint)
+  container.addEventListener('keypress', saveCreatedPolygon)
+}
+// !! No en su sitio
+function stopPolygonCreation(){
+  container.removeEventListener('click', newPolygonPoint)
+  container.removeEventListener('keypress', saveCreatedPolygon)
 }
 
 /* CARGAR MESH */
@@ -352,7 +370,6 @@ function generatePolygon(vertices){ //vertices es { x, y, z }
 
 
 /* DIBUJAR POLIGONOS */
-let drawing = false;
 
 const intersections = (x,y) => {
   mouse.x = (x / renderer.domElement.clientWidth ) * 2 - 1
@@ -368,9 +385,7 @@ let newPolygonVertices = []
 let newPolygons = [] // Para poderlos borrar cuadno se cancela, hay que guardar la instancia en algun lado
 let clickingPoints = [] // Para poderlos borrar cuando se cancela, hay que guardar la instancia en algun lado
 
-// !! Cambiar nombre de mouseClick y keyPress para que se sepa qué hacen
-function mouseClick(event){
-  if(drawing === false) return
+function newPolygonPoint(event){
 
   const intersects = intersections(event.clientX, event.clientY)
   let [px,py,pz] = [intersects[0].point.x, intersects[0].point.y, intersects[0].point.z]
@@ -401,11 +416,12 @@ function createPoint(){
   return point
 }
 
-function keyPress(e){
-  if(drawing === false) return
-  
+function saveCreatedPolygon(e){
+
   if(e.key === "Enter"){
-    drawing = false
+    
+    stopPolygonCreation()
+
     console.log("End polygon")
     let savePolygonModal = new Modal({
       id:'savePolygon',
