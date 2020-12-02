@@ -75,6 +75,14 @@ export const GUI = (function(){
   function add(what,where){ 
     // Se gestiona de forma un poco cutre donde se ponen las cosas que se añaden al gui o a los elementos del gui en base a su clase
     // Esto no tiene ningun futuro puta
+    
+    // Si se le pasa un string en vez de un nodo, busca el id del elemento en el gui
+    if(typeof where === 'string'){
+      let target = document.querySelector(`.gui #${where}`)
+      target.appendChild(what)
+      return
+    }
+
     if( what.classList.contains('gui__element') && where.classList.contains('gui__group') ){ // Si añadimos un elemento a un grupo tiene que ir dentro del content del grupo
       where.querySelector('.gui__group__content').appendChild(what)
     }else if( what.classList.contains('gui__button') && where.classList.contains('gui__group') ){ // Si añadimos un boton a un grupo tiene que ir al título

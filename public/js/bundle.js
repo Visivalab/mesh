@@ -45837,6 +45837,13 @@ var GUI = function () {
   function add(what, where) {
     // Se gestiona de forma un poco cutre donde se ponen las cosas que se añaden al gui o a los elementos del gui en base a su clase
     // Esto no tiene ningun futuro puta
+    // Si se le pasa un string en vez de un nodo, busca el id del elemento en el gui
+    if (typeof where === 'string') {
+      var target = document.querySelector(".gui #".concat(where));
+      target.appendChild(what);
+      return;
+    }
+
     if (what.classList.contains('gui__element') && where.classList.contains('gui__group')) {
       // Si añadimos un elemento a un grupo tiene que ir dentro del content del grupo
       where.querySelector('.gui__group__content').appendChild(what);
@@ -51724,13 +51731,6 @@ function createGui() {
       color: 'green',
       focus: true
     }, function () {
-      console.log("Empezar a dibujar");
-      /* Creo un objeto para el polígono?? 
-      Solo duraria el rato que se crea, luego las coordenadas
-      irian a la bbdd. 
-      Pero tambien, cuando hay polígonos, se deberian cargar todos*/
-      //let polygon = new Polygon({})
-
       drawing = true;
       modalNewPolygon.close();
     });
@@ -51808,8 +51808,7 @@ function loadProject() {
         camera.layers.toggle(i);
         render();
       });
-      GUI.add(guiLayer, layersGroup); // 
-
+      GUI.add(guiLayer, 'layers');
       loadLayer(i, meshes[i]);
     };
 
@@ -51832,7 +51831,7 @@ function loadProject() {
           // Intentar no usar capas para esto, solo hay 32 layers como tal en three
           console.log("Apagar este polygon");
         });
-        GUI.add(guiLayer, polygonsGroup);
+        GUI.add(guiLayer, 'polygons');
         scene.add(generatePolygon(polygon.points));
       }
     } catch (err) {

@@ -100,6 +100,7 @@ function init() {
 }
 
 /* CREAR ELEMENTO INTERFAZ */
+
 function createGui(){
 
   mainGui = GUI.create()
@@ -118,15 +119,7 @@ function createGui(){
     modalNewPolygon.write('<strong>Pulsa el ratón</strong> para crear el polígono.<br>Cuando termines, <strong>pulsa enter</strong>.')
     modalNewPolygon.addButton({text:'Ok',color:'green',focus:true}, function(){
       
-      console.log("Empezar a dibujar")
-      
-      /* Creo un objeto para el polígono?? 
-      Solo duraria el rato que se crea, luego las coordenadas
-      irian a la bbdd. 
-      Pero tambien, cuando hay polígonos, se deberian cargar todos*/
-      //let polygon = new Polygon({})
       drawing = true;
-
       modalNewPolygon.close()
     
     })
@@ -219,7 +212,7 @@ function loadProject(){
         camera.layers.toggle( i )
         render()
       })
-      GUI.add(guiLayer,layersGroup) // 
+      GUI.add(guiLayer,'layers')
 
       loadLayer(i,meshes[i])
     }
@@ -235,7 +228,7 @@ function loadProject(){
         // Intentar no usar capas para esto, solo hay 32 layers como tal en three
         console.log("Apagar este polygon")
       })
-      GUI.add(guiLayer,polygonsGroup)
+      GUI.add(guiLayer,'polygons')
 
       scene.add( generatePolygon(polygon.points) )
 
