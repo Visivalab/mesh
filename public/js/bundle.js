@@ -1,5 +1,79 @@
 'use strict';
 
+function _unsupportedIterableToArray(o, minLen) {
+  if (!o) return;
+  if (typeof o === "string") return _arrayLikeToArray(o, minLen);
+  var n = Object.prototype.toString.call(o).slice(8, -1);
+  if (n === "Object" && o.constructor) n = o.constructor.name;
+  if (n === "Map" || n === "Set") return Array.from(o);
+  if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen);
+}
+
+function _arrayLikeToArray(arr, len) {
+  if (len == null || len > arr.length) len = arr.length;
+
+  for (var i = 0, arr2 = new Array(len); i < len; i++) arr2[i] = arr[i];
+
+  return arr2;
+}
+
+function _createForOfIteratorHelper(o, allowArrayLike) {
+  var it;
+
+  if (typeof Symbol === "undefined" || o[Symbol.iterator] == null) {
+    if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") {
+      if (it) o = it;
+      var i = 0;
+
+      var F = function () {};
+
+      return {
+        s: F,
+        n: function () {
+          if (i >= o.length) return {
+            done: true
+          };
+          return {
+            done: false,
+            value: o[i++]
+          };
+        },
+        e: function (e) {
+          throw e;
+        },
+        f: F
+      };
+    }
+
+    throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+  }
+
+  var normalCompletion = true,
+      didErr = false,
+      err;
+  return {
+    s: function () {
+      it = o[Symbol.iterator]();
+    },
+    n: function () {
+      var step = it.next();
+      normalCompletion = step.done;
+      return step;
+    },
+    e: function (e) {
+      didErr = true;
+      err = e;
+    },
+    f: function () {
+      try {
+        if (!normalCompletion && it.return != null) it.return();
+      } finally {
+        if (didErr) throw err;
+      }
+    }
+  };
+}
+
 // threejs.org/license
 const REVISION = '122';
 const MOUSE = { LEFT: 0, MIDDLE: 1, RIGHT: 2, ROTATE: 0, DOLLY: 1, PAN: 2 };
@@ -45680,180 +45754,180 @@ earcut.flatten = function (data) {
 };
 earcut_1.default = _default;
 
-const GUI = (function(){
-  
-  function create(){
-    let gui = document.createElement('div');
+var GUI = function () {
+  function create() {
+    var gui = document.createElement('div');
     gui.className = 'gui';
-    
-    return gui
+    return gui;
   }
 
-  function createLayer(id,name,callback = null){
-    let layer = document.createElement('div');
+  function createLayer(id, name) {
+    var callback = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
+    var layer = document.createElement('div');
     layer.className = 'gui__element';
     layer.id = id;
     layer.textContent = name;
-    
-    let info = document.createElement('div');
+    var info = document.createElement('div');
     info.className = 'gui__element__info';
     layer.appendChild(info);
-  
     layer.addEventListener('click', callback);
-  
-    return layer
+    return layer;
   }
 
-  function createSeparator(type){
-    let separator = document.createElement('div');
-    if(type == 'line'){
+  function createSeparator(type) {
+    var separator = document.createElement('div');
+
+    if (type == 'line') {
       separator.className = 'gui__separator gui__separator--line';
-    }else if(type == 'space'){
+    } else if (type == 'space') {
       separator.className = 'gui__separator gui__separator--space';
     }
-    return separator
+
+    return separator;
   }
 
-  function createButton(icon = null, extraClass, action){
-    let button = document.createElement('div');
-    button.className = 'gui__button '+extraClass;
-    button.style.backgroundImage = `url(${icon})`;
-    
+  function createButton() {
+    var icon = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
+    var extraClass = arguments.length > 1 ? arguments[1] : undefined;
+    var action = arguments.length > 2 ? arguments[2] : undefined;
+    var button = document.createElement('div');
+    button.className = 'gui__button ' + extraClass;
+    button.style.backgroundImage = "url(".concat(icon, ")");
     button.addEventListener('click', action);
-
-    return button
+    return button;
   }
-  function createGroup(id,text = null, dropdownMode = false, opened = true /*,callback = null*/){
-    let group = document.createElement('div');
+
+  function createGroup(id)
+  /*,callback = null*/
+  {
+    var text = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
+    var dropdownMode = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
+    var opened = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : true;
+    var group = document.createElement('div');
     group.className = 'gui__group';
     group.id = id;
-    if(text){
-      let groupTitle = document.createElement('div');
+
+    if (text) {
+      var groupTitle = document.createElement('div');
       groupTitle.className = 'gui__group__title';
       groupTitle.textContent = text;
-      
-      if(dropdownMode){
-        groupTitle.addEventListener('click', () => toggleGroup(group) );
+
+      if (dropdownMode) {
+        groupTitle.addEventListener('click', function () {
+          return toggleGroup(group);
+        });
         group.classList.add('gui__group--dropdown');
       }
-      
+
       group.appendChild(groupTitle);
     }
-    function toggleGroup(group){
-      group.classList.toggle('gui__group--active');
-      //console.log(group)
+
+    function toggleGroup(group) {
+      group.classList.toggle('gui__group--active'); //console.log(group)
     }
-    if(opened) toggleGroup(group);
-  
-    let groupContent = document.createElement('div');
+
+    if (opened) toggleGroup(group);
+    var groupContent = document.createElement('div');
     groupContent.className = 'gui__group__content';
-    group.appendChild(groupContent);
-  
-    //group.addEventListener('click', callback)
-  
-    return group
+    group.appendChild(groupContent); //group.addEventListener('click', callback)
+
+    return group;
   }
 
-  function add(what,where){ 
+  function add(what, where) {
     // Se gestiona de forma un poco cutre donde se ponen las cosas que se añaden al gui o a los elementos del gui en base a su clase
     // Esto no tiene ningun futuro puta
-    if( what.classList.contains('gui__element') && where.classList.contains('gui__group') ){ // Si añadimos un elemento a un grupo tiene que ir dentro del content del grupo
+    if (what.classList.contains('gui__element') && where.classList.contains('gui__group')) {
+      // Si añadimos un elemento a un grupo tiene que ir dentro del content del grupo
       where.querySelector('.gui__group__content').appendChild(what);
-    }else if( what.classList.contains('gui__button') && where.classList.contains('gui__group') ){ // Si añadimos un boton a un grupo tiene que ir al título
+    } else if (what.classList.contains('gui__button') && where.classList.contains('gui__group')) {
+      // Si añadimos un boton a un grupo tiene que ir al título
       where.querySelector('.gui__group__title').appendChild(what);
-    }else {
-      where.appendChild(what); 
+    } else {
+      where.appendChild(what);
     }
   }
 
   return {
-    create,
-    createLayer,
-    createSeparator,
-    createButton,
-    createGroup,
-    add
-  }
-})();
+    create: create,
+    createLayer: createLayer,
+    createSeparator: createSeparator,
+    createButton: createButton,
+    createGroup: createGroup,
+    add: add
+  };
+}();
 
-function Modal(options){
+function Modal(options) {
   this.background = options.background || false;
   this.place = options.place || 'body';
   this.id = options.id || null;
 }
-
 /* Habria alguna manera de poder hacer todo esto
 pero sin linkar las cosas a una clase o id concreto?
 Seria necesario en algun contexto? */
 
-Modal.prototype.mount = function(){
-
-  if(!this.id){
+Modal.prototype.mount = function () {
+  if (!this.id) {
     console.error('Al crear la modal hay que pasar ID');
-    return
+    return;
   }
-  let modalElement = document.createElement('div');
+
+  var modalElement = document.createElement('div');
   modalElement.className = 'modal';
   modalElement.id = this.id;
-  let modalContent = document.createElement('div');
+  var modalContent = document.createElement('div');
   modalContent.className = 'modal__content';
-  let modalbuttons = document.createElement('div');
+  var modalbuttons = document.createElement('div');
   modalbuttons.className = 'modal__buttons';
-
   modalElement.appendChild(modalContent);
   modalElement.appendChild(modalbuttons);
-
-  if(this.background === true) this.createBackground();
-
+  if (this.background === true) this.createBackground();
   document.querySelector(this.place).appendChild(modalElement);
 };
 
-Modal.prototype.createBackground = function(){
-  let backgroundElement = document.createElement('div');
+Modal.prototype.createBackground = function () {
+  var backgroundElement = document.createElement('div');
   backgroundElement.className = 'modal__background';
   document.querySelector(this.place).appendChild(backgroundElement);
 };
 
-Modal.prototype.write = function(text){
-  let modalText = document.createElement('p');
+Modal.prototype.write = function (text) {
+  var modalText = document.createElement('p');
   modalText.innerHTML = text;
-  document.querySelector(`#${this.id} .modal__content`).appendChild(modalText);
+  document.querySelector("#".concat(this.id, " .modal__content")).appendChild(modalText);
 };
 
-Modal.prototype.addInput = function(options){
-  let input = document.createElement('input');
+Modal.prototype.addInput = function (options) {
+  var input = document.createElement('input');
   input.type = options.type;
   input.id = options.id;
   input.name = options.name;
   input.placeholder = options.placeholder;
-
-  document.querySelector(`#${this.id} .modal__content`).appendChild(input);
-
-  if(options.focus) input.focus();
+  document.querySelector("#".concat(this.id, " .modal__content")).appendChild(input);
+  if (options.focus) input.focus();
 };
 
-Modal.prototype.addButton = function(options,callback){
-  let buttonElement = document.createElement('button');
-  buttonElement.className = `button--${options.color}`;
+Modal.prototype.addButton = function (options, callback) {
+  var buttonElement = document.createElement('button');
+  buttonElement.className = "button--".concat(options.color);
   buttonElement.textContent = options.text;
   buttonElement.addEventListener('click', callback);
-  
-  document.querySelector(`#${this.id} .modal__buttons`).appendChild(buttonElement);
-  
-  if(options.focus) buttonElement.focus();
-  if(options.key) document.addEventListener('keydown', modalKeydown);
+  document.querySelector("#".concat(this.id, " .modal__buttons")).appendChild(buttonElement);
+  if (options.focus) buttonElement.focus();
+  if (options.key) document.addEventListener('keydown', modalKeydown);
 
-  function modalKeydown(e){
-    if(options.key === e.key){
+  function modalKeydown(e) {
+    if (options.key === e.key) {
       callback();
       document.removeEventListener('keydown', modalKeydown);
     }
   }
 };
 
-Modal.prototype.close = function(){
-  document.querySelector(`#${this.id}`).remove();
-  if(this.background) document.querySelector('.modal__background').remove();
+Modal.prototype.close = function () {
+  document.querySelector("#".concat(this.id)).remove();
+  if (this.background) document.querySelector('.modal__background').remove();
 };
 
 // This set of controls performs orbiting, dollying (zooming), and panning.
@@ -51558,338 +51632,320 @@ DRACOLoader.getDecoderModule = function () {
 
 };
 
-let renderer, scene, camera, controls, ambientLight;
-let container, mainGui;
-let mesh;
-
-let pathProjectId = window.location.pathname.split('/').pop();
-
-const raycaster = new Raycaster();
-const mouse = new Vector2();
-
+var renderer, scene, camera, controls, ambientLight;
+var container, mainGui;
+var mesh;
+var pathProjectId = window.location.pathname.split('/').pop();
+var raycaster = new Raycaster();
+var mouse = new Vector2();
 init();
 
-function createCamera(){
-    
-  camera = new PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 10000 );
-  camera.position.set( - 40, 40, 40 );
-  
-  camera.layers.enable( 0 );
-  scene.add( camera );
-
+function createCamera() {
+  camera = new PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 10000);
+  camera.position.set(-40, 40, 40);
+  camera.layers.enable(0);
+  scene.add(camera);
 }
 
-function createLights(){
-
-  ambientLight = new AmbientLight( 0xffffff, 1.5 );
-  scene.add( ambientLight );
-
+function createLights() {
+  ambientLight = new AmbientLight(0xffffff, 1.5);
+  scene.add(ambientLight);
 }
 
-function setControls(){
-  controls = new OrbitControls( camera, renderer.domElement );
-  controls.addEventListener( 'change', render );
+function setControls() {
+  controls = new OrbitControls(camera, renderer.domElement);
+  controls.addEventListener('change', render);
   controls.minDistance = 10;
   controls.maxDistance = 5000;
   controls.enablePan = true;
 }
 
-function createRenderer(){
-    
-  renderer = new WebGLRenderer({ 
+function createRenderer() {
+  renderer = new WebGLRenderer({
     antialias: true,
-    physicallyCorrectLights: true 
+    physicallyCorrectLights: true
   });
-  renderer.setPixelRatio( window.devicePixelRatio );
-  renderer.setSize( window.innerWidth, window.innerHeight );
-
-  //Esto y el antialias le da a saco de calidad al render, pero no sé exactamente como
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setSize(window.innerWidth, window.innerHeight); //Esto y el antialias le da a saco de calidad al render, pero no sé exactamente como
   //renderer.toneMapping = THREE.ACESFilmicToneMapping;
+
   renderer.toneMappingExposure = 1;
   renderer.outputEncoding = sRGBEncoding;
-
-  container.appendChild( renderer.domElement );
-
+  container.appendChild(renderer.domElement);
 }
 
 function onWindowResize() {
-  renderer.setSize( window.innerWidth, window.innerHeight ); // Actualiza el tamaño del visor
-
+  renderer.setSize(window.innerWidth, window.innerHeight); // Actualiza el tamaño del visor
   // Actualiza el tamaño de la camara, sino los elementos se estiran y se chafan
-  camera.aspect = window.innerWidth / window.innerHeight; 
-  camera.updateProjectionMatrix();
 
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
   render();
 }
 
 function render() {
-  renderer.render( scene, camera );
+  renderer.render(scene, camera);
 }
 
 function init() {
-
   container = document.querySelector('#viewer');
-  
   container.addEventListener('click', mouseClick, false);
-  container.addEventListener('keypress', keyPress);
+  container.addEventListener('keypress', keyPress); //Crear la escena con su background bien bonito
 
-
-  //Crear la escena con su background bien bonito
   scene = new Scene();
-  scene.background = new Color( 0xbfe3dd );
-
+  scene.background = new Color(0xbfe3dd);
   createCamera();
   createLights();
   createRenderer();
   setControls();
   createGui();
   loadProject();
-
   render();
-  
-  window.addEventListener( 'resize', onWindowResize, false );
+  window.addEventListener('resize', onWindowResize, false);
 }
-
 /* CREAR ELEMENTO INTERFAZ */
-function createGui(){
 
+
+function createGui() {
   mainGui = GUI.create();
-
-  let defaultOptions = GUI.createGroup('defaultOptions');
-  let layersGroup = GUI.createGroup('layers','Layers',true,true);
-  let polygonsGroup = GUI.createGroup('polygons','Polygons',true,true);
-  let addPolygonsButton = GUI.createButton( '/public/styles/icons/plus_cross.svg','gui__button--rounded', function(e){
+  var defaultOptions = GUI.createGroup('defaultOptions');
+  var layersGroup = GUI.createGroup('layers', 'Layers', true, true);
+  var polygonsGroup = GUI.createGroup('polygons', 'Polygons', true, true);
+  var addPolygonsButton = GUI.createButton('/public/styles/icons/plus_cross.svg', 'gui__button--rounded', function (e) {
     e.stopPropagation();
-    
-    let modalNewPolygon = new Modal({
+    var modalNewPolygon = new Modal({
       id: 'modall',
       background: true
     });
     modalNewPolygon.mount();
     modalNewPolygon.write('<strong>Pulsa el ratón</strong> para crear el polígono.<br>Cuando termines, <strong>pulsa enter</strong>.');
-    modalNewPolygon.addButton({text:'Ok',color:'green',focus:true}, function(){
-      
+    modalNewPolygon.addButton({
+      text: 'Ok',
+      color: 'green',
+      focus: true
+    }, function () {
       console.log("Empezar a dibujar");
-      
       /* Creo un objeto para el polígono?? 
       Solo duraria el rato que se crea, luego las coordenadas
       irian a la bbdd. 
       Pero tambien, cuando hay polígonos, se deberian cargar todos*/
       //let polygon = new Polygon({})
-      drawing = true;
 
+      drawing = true;
       modalNewPolygon.close();
-    
     });
-    modalNewPolygon.addButton({text:'Cancel',color:'red',focus:false}, function(){
+    modalNewPolygon.addButton({
+      text: 'Cancel',
+      color: 'red',
+      focus: false
+    }, function () {
       modalNewPolygon.close();
     });
   });
-  
-  GUI.add( GUI.createLayer('enableAll','Enable all', function(){
+  GUI.add(GUI.createLayer('enableAll', 'Enable all', function () {
     camera.layers.enableAll();
     render();
   }), defaultOptions);
-
-  GUI.add( GUI.createLayer('disableAll','Disable all', function(){
+  GUI.add(GUI.createLayer('disableAll', 'Disable all', function () {
     camera.layers.disableAll();
     render();
   }), defaultOptions);
-
   GUI.add(layersGroup, mainGui);
   GUI.add(GUI.createSeparator('space'), mainGui);
   GUI.add(addPolygonsButton, polygonsGroup);
   GUI.add(polygonsGroup, mainGui);
   GUI.add(GUI.createSeparator('line'), mainGui);
   GUI.add(defaultOptions, mainGui);
-
-  document.querySelector('body').appendChild( mainGui );
-
+  document.querySelector('body').appendChild(mainGui);
 }
-
 /* CARGAR MESH */
-function loadLayer(id,data){
-  const api_loader = new GLTFLoader();
-  
-  // Las meshes estan comprimidas con DRACO para que pesen MUCHISIMO menos, pero se necesita el descodificador draco para cargarlas - https://threejs.org/docs/#examples/en/loaders/GLTFLoader
-  const dracoLoader = new DRACOLoader();
+
+
+function loadLayer(id, data) {
+  var api_loader = new GLTFLoader(); // Las meshes estan comprimidas con DRACO para que pesen MUCHISIMO menos, pero se necesita el descodificador draco para cargarlas - https://threejs.org/docs/#examples/en/loaders/GLTFLoader
+
+  var dracoLoader = new DRACOLoader();
   dracoLoader.setDecoderPath('/draco/'); // Para incluir los decoders hay definida una ruta en main.js a su carpeta dentro del module three de node_modules
+
   api_loader.setDRACOLoader(dracoLoader); // Carga elementos de aws que agarra de la base de datos
 
-  api_loader.load(
-    //data.url, 
-    '/public/meshes/teatro_decimated.glb',
-    function(glb){
-      console.group('Loading layer');
-      console.log("DB layer info: ", data);
-      console.log("Poner en la capa "+id);
-      console.log("glb info: ", glb);
+  api_loader.load( //data.url, 
+  '/public/meshes/teatro_decimated.glb', function (glb) {
+    console.group('Loading layer');
+    console.log("DB layer info: ", data);
+    console.log("Poner en la capa " + id);
+    console.log("glb info: ", glb);
+    mesh = glb.scene;
+    scene.add(glb.scene); // Todos los hijos de la escena deben tener el layer, no vale con setear solamente la escena. traverse recorre todos los hijos
 
-      mesh = glb.scene;
-      scene.add(glb.scene);
-
-      // Todos los hijos de la escena deben tener el layer, no vale con setear solamente la escena. traverse recorre todos los hijos
-      glb.scene.traverse( function(child) {
-        child.layers.set( id );
-      });
-
-      ambientLight.layers.enable( id );
-      camera.layers.enable( id );
-      raycaster.layers.enable( id );
-
-      render();
-      console.groupEnd();
-    },
-    function(xhr){
-      let layer = document.querySelector('#layer_'+id+' .gui__element__info');
-      layer.textContent = Math.round( xhr.loaded / xhr.total * 100 ) + '%';
-    },
-    function(error){
-      console.log( 'An error happened',error );
-    }
-  );
-
+    glb.scene.traverse(function (child) {
+      child.layers.set(id);
+    });
+    ambientLight.layers.enable(id);
+    camera.layers.enable(id);
+    raycaster.layers.enable(id);
+    render();
+    console.groupEnd();
+  }, function (xhr) {
+    var layer = document.querySelector('#layer_' + id + ' .gui__element__info');
+    layer.textContent = Math.round(xhr.loaded / xhr.total * 100) + '%';
+  }, function (error) {
+    console.log('An error happened', error);
+  });
 }
 
-function loadProject(){
-  
-  fetch('/api/project/'+pathProjectId)
-  .then( response => {
-    return response.json()
-  })
-  .then( project => {
-    console.log(`Project: ${project._id}`, project);
-    
-    let meshes = project.meshes;
-    let polygons = project.polygons;
+function loadProject() {
+  fetch('/api/project/' + pathProjectId).then(function (response) {
+    return response.json();
+  }).then(function (project) {
+    console.log("Project: ".concat(project._id), project);
+    var meshes = project.meshes;
+    var polygons = project.polygons; // Cargar las meshes de la base de datos
 
-    // Cargar las meshes de la base de datos
-    for(let i=0; i<meshes.length; i++){ // En un for normal porque los layers deben tener numeros del 0 al 31 - https://threejs.org/docs/#api/en/core/Layers
-
-      let guiLayer = GUI.createLayer(`layer_${i}`, meshes[i].name, function(){
-        camera.layers.toggle( i );
+    var _loop = function _loop(i) {
+      // En un for normal porque los layers deben tener numeros del 0 al 31 - https://threejs.org/docs/#api/en/core/Layers
+      var guiLayer = GUI.createLayer("layer_".concat(i), meshes[i].name, function () {
+        camera.layers.toggle(i);
         render();
       });
-      GUI.add(guiLayer,layersGroup); // 
+      GUI.add(guiLayer, layersGroup); // 
 
-      loadLayer(i,meshes[i]);
-    }
+      loadLayer(i, meshes[i]);
+    };
 
-    // Cargar los polígonos
+    for (var i = 0; i < meshes.length; i++) {
+      _loop(i);
+    } // Cargar los polígonos
     // Como puede haber muchos poligonos, voy a reservar las capas 30 y 31 para puntos y polígonos (son las últimas ocupables)
     // O al ser poca carga, los puedo quitar y añadir de la escena en vez de apagarlos
-    for( let polygon of polygons ){
-      console.log(polygon);
 
-      //Esto no seria createLayer.. quiza tengo que buscar un nombre que no líe, createElement
-      let guiLayer = GUI.createLayer(`polygon_${polygon.id}`, polygon.name, function(){
-        // Intentar no usar capas para esto, solo hay 32 layers como tal en three
-        console.log("Apagar este polygon");
-      });
-      GUI.add(guiLayer,polygonsGroup);
 
-      scene.add( generatePolygon(polygon.points) );
+    var _iterator = _createForOfIteratorHelper(polygons),
+        _step;
 
+    try {
+      for (_iterator.s(); !(_step = _iterator.n()).done;) {
+        var polygon = _step.value;
+        console.log(polygon); //Esto no seria createLayer.. quiza tengo que buscar un nombre que no líe, createElement
+
+        var guiLayer = GUI.createLayer("polygon_".concat(polygon.id), polygon.name, function () {
+          // Intentar no usar capas para esto, solo hay 32 layers como tal en three
+          console.log("Apagar este polygon");
+        });
+        GUI.add(guiLayer, polygonsGroup);
+        scene.add(generatePolygon(polygon.points));
+      }
+    } catch (err) {
+      _iterator.e(err);
+    } finally {
+      _iterator.f();
     }
   });
 }
 
+function generatePolygon(vertices) {
+  //vertices es { x, y, z }
+  var faces = [];
+  var geometry = new Geometry();
+  var earcutVertices = [];
+  var geometryVertices = [];
 
-function generatePolygon(vertices){ //vertices es { x, y, z }
-  let faces = [];
-  let geometry = new Geometry();
-  let earcutVertices = [];
-  let geometryVertices = [];
-  
-  for(let vertice of vertices){
-    geometryVertices.push( new Vector3(vertice.x, vertice.y, vertice.z) );
-    earcutVertices = earcutVertices.concat( [vertice.x, vertice.y, vertice.z] );
+  var _iterator2 = _createForOfIteratorHelper(vertices),
+      _step2;
+
+  try {
+    for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
+      var vertice = _step2.value;
+      geometryVertices.push(new Vector3(vertice.x, vertice.y, vertice.z));
+      earcutVertices = earcutVertices.concat([vertice.x, vertice.y, vertice.z]);
+    }
+  } catch (err) {
+    _iterator2.e(err);
+  } finally {
+    _iterator2.f();
   }
-  let triangleVertexs = earcut_1(earcutVertices,null,3); // earcut retorna un array con los indices de los vertices de cada triangulo - [1,0,3, 3,2,1] -
 
-  for(let i=0; i<triangleVertexs.length; i+=3){ // Por cada 3 vertices hay crear una cara
-    faces.push( new Face3( triangleVertexs[i], triangleVertexs[i+1], triangleVertexs[i+2] ) );
+  var triangleVertexs = earcut_1(earcutVertices, null, 3); // earcut retorna un array con los indices de los vertices de cada triangulo - [1,0,3, 3,2,1] -
+
+  for (var i = 0; i < triangleVertexs.length; i += 3) {
+    // Por cada 3 vertices hay crear una cara
+    faces.push(new Face3(triangleVertexs[i], triangleVertexs[i + 1], triangleVertexs[i + 2]));
   }
 
   geometry.vertices = geometryVertices;
   geometry.faces = faces;
-  
   geometry.computeFaceNormals();
-
-  const color = new Color("rgb(150,50,50)");
-  const geometrymaterial = new MeshStandardMaterial( { 
-    color,
+  var color = new Color("rgb(150,50,50)");
+  var geometrymaterial = new MeshStandardMaterial({
+    color: color,
     side: 2,
     transparent: true,
     opacity: 0.5
   });
-
-  let createdPolygon = new Mesh( geometry, geometrymaterial );
-  return createdPolygon
-
+  var createdPolygon = new Mesh(geometry, geometrymaterial);
+  return createdPolygon;
 }
-
-
-
-
 /* DIBUJAR POLIGONOS */
-let drawing = false;
 
-const intersections = (x,y) => {
-  mouse.x = (x / renderer.domElement.clientWidth ) * 2 - 1;
-  mouse.y = - ( y / renderer.domElement.clientHeight ) * 2 + 1;
-  raycaster.setFromCamera( mouse, camera );
 
-  return raycaster.intersectObjects(scene.children, true)
+var drawing = false;
+
+var intersections = function intersections(x, y) {
+  mouse.x = x / renderer.domElement.clientWidth * 2 - 1;
+  mouse.y = -(y / renderer.domElement.clientHeight) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+  return raycaster.intersectObjects(scene.children, true);
 };
 
+var newPolygonVertices = [];
+var newPolygons = []; // Para poderlos borrar cuadno se cancela, hay que guardar la instancia en algun lado
 
-
-let newPolygonVertices = [];
-let newPolygons = []; // Para poderlos borrar cuadno se cancela, hay que guardar la instancia en algun lado
-let clickingPoints = []; // Para poderlos borrar cuando se cancela, hay que guardar la instancia en algun lado
-
+var clickingPoints = []; // Para poderlos borrar cuando se cancela, hay que guardar la instancia en algun lado
 // !! Cambiar nombre de mouseClick y keyPress para que se sepa qué hacen
-function mouseClick(event){
-  if(drawing === false) return
 
-  const intersects = intersections(event.clientX, event.clientY);
-  let [px,py,pz] = [intersects[0].point.x, intersects[0].point.y, intersects[0].point.z];
-  
-  let point = createPoint();
+function mouseClick(event) {
+  if (drawing === false) return;
+  var intersects = intersections(event.clientX, event.clientY);
+  var _ref = [intersects[0].point.x, intersects[0].point.y, intersects[0].point.z],
+      px = _ref[0],
+      py = _ref[1],
+      pz = _ref[2];
+  var point = createPoint();
   clickingPoints.push(point);
   scene.add(point);
   point.position.set(px, py, pz);
+  newPolygonVertices.push({
+    x: px,
+    y: py,
+    z: pz
+  });
 
-  newPolygonVertices.push({x:px,y:py,z:pz});
-
-  if(newPolygonVertices.length >= 3){ 
-    let newPolygon = generatePolygon(newPolygonVertices);
-    newPolygons.push(newPolygon);   
-
-    scene.add( newPolygon );
-    // !! Ver como No ir poniendo los polígonos uno encima de otro..
+  if (newPolygonVertices.length >= 3) {
+    var newPolygon = generatePolygon(newPolygonVertices);
+    newPolygons.push(newPolygon);
+    scene.add(newPolygon); // !! Ver como No ir poniendo los polígonos uno encima de otro..
   }
+
   render();
-
 }
 
-function createPoint(){
-  const ico = new IcosahedronGeometry(0.3);
-  const material = new MeshBasicMaterial( {color: 0xd9d9d9} );
-  const point = new Mesh( ico, material );
-
-  return point
+function createPoint() {
+  var ico = new IcosahedronGeometry(0.3);
+  var material = new MeshBasicMaterial({
+    color: 0xd9d9d9
+  });
+  var point = new Mesh(ico, material);
+  return point;
 }
 
-function keyPress(e){
-  if(drawing === false) return
-  
-  if(e.key === "Enter"){
+function keyPress(e) {
+  if (drawing === false) return;
+
+  if (e.key === "Enter") {
     drawing = false;
     console.log("End polygon");
-    let savePolygonModal = new Modal({
-      id:'savePolygon',
+    var savePolygonModal = new Modal({
+      id: 'savePolygon',
       background: true
     });
     savePolygonModal.mount();
@@ -51902,43 +51958,69 @@ function keyPress(e){
       focus: true
     });
     savePolygonModal.addButton({
-      text:'Save',
-      color:'green',
+      text: 'Save',
+      color: 'green',
       focus: false,
       key: 'Enter'
-    }, function(){
-      fetch('/api/polygon/save',{
-        method:'POST',
+    }, function () {
+      fetch('/api/polygon/save', {
+        method: 'POST',
         body: JSON.stringify({
           project: pathProjectId,
           points: newPolygonVertices,
           name: document.querySelector('#polygonName').value,
           color: 'green'
         }),
-        headers:{
+        headers: {
           'Content-Type': 'application/json'
         }
-      })
-      .then( res => res.json() )
-      .then( resp => {
-        console.log('Added',resp);
-      })
-      .catch( error => console.error(error) );
-      
+      }).then(function (res) {
+        return res.json();
+      }).then(function (resp) {
+        console.log('Added', resp);
+      }).catch(function (error) {
+        return console.error(error);
+      });
       newPolygonVertices = [];
       savePolygonModal.close();
     });
-    savePolygonModal.addButton({text:'Cancel',color:'red',focus:false}, function(){
+    savePolygonModal.addButton({
+      text: 'Cancel',
+      color: 'red',
+      focus: false
+    }, function () {
+      var _iterator3 = _createForOfIteratorHelper(clickingPoints),
+          _step3;
 
-      for(let point of clickingPoints) scene.remove(point);
-      for(let polygon of newPolygons) scene.remove(polygon);
-      
+      try {
+        for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
+          var point = _step3.value;
+          scene.remove(point);
+        }
+      } catch (err) {
+        _iterator3.e(err);
+      } finally {
+        _iterator3.f();
+      }
+
+      var _iterator4 = _createForOfIteratorHelper(newPolygons),
+          _step4;
+
+      try {
+        for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
+          var polygon = _step4.value;
+          scene.remove(polygon);
+        }
+      } catch (err) {
+        _iterator4.e(err);
+      } finally {
+        _iterator4.f();
+      }
+
       newPolygonVertices = [];
       clickingPoints = [];
       newPolygons = [];
-
       savePolygonModal.close();
-      
       render();
     });
   }
