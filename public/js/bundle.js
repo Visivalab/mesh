@@ -51843,35 +51843,36 @@ function loadProject() {
         _step;
 
     try {
-      var _loop2 = function _loop2() {
+      for (_iterator.s(); !(_step = _iterator.n()).done;) {
         var polygon = _step.value;
         console.log(polygon);
-        var guiLayer = GUI.createBasic("polygon_".concat(polygon.id), polygon.name, function () {
-          // Intentar no usar capas para esto, solo hay 32 layers como tal en three
-          console.log("Apagar este polygon");
-        }, {
+        var optionsLayer = {
           edit: {
             'name': 'Edit',
             'image': '/styles/icons/menu_3puntosVertical.svg',
             'event': function event() {
               console.log("Open element menu");
             }
-          },
-          openLink: {
+          }
+        };
+
+        if (polygon.link) {
+          optionsLayer.openLink = {
             'name': 'Open link',
             'image': '/styles/icons/link.svg',
             'event': function event() {
               console.log("Open link");
-              window.open(polygon.link, '_blank');
+              window.open(resp.link, '_blank');
             }
-          }
-        });
+          };
+        }
+
+        var guiLayer = GUI.createBasic("polygon_".concat(polygon.id), polygon.name, function () {
+          // Intentar no usar capas para esto, solo hay 32 layers como tal en three
+          console.log("Apagar este polygon");
+        }, optionsLayer);
         GUI.add(guiLayer, '#polygons .gui__group__content');
         scene.add(generatePolygon(polygon.points));
-      };
-
-      for (_iterator.s(); !(_step = _iterator.n()).done;) {
-        _loop2();
       }
     } catch (err) {
       _iterator.e(err);
@@ -52024,11 +52025,32 @@ function keyPress(e) {
       }).then(function (resp) {
         // Añadir poligono en gui y dejarlo bien, sin puntos en los vertices etc
         // Podria añadirlo sin mas o recargar la lista
-        // Esto está repetido de mas arriba
+        // !! Esto está repetido de mas arriba. Hacer refactor de la creación de capas
+        var optionsLayer = {
+          edit: {
+            'name': 'Edit',
+            'image': '/styles/icons/menu_3puntosVertical.svg',
+            'event': function event() {
+              console.log("Open element menu");
+            }
+          }
+        };
+
+        if (resp.link) {
+          optionsLayer.openLink = {
+            'name': 'Open link',
+            'image': '/styles/icons/link.svg',
+            'event': function event() {
+              console.log("Open link");
+              window.open(resp.link, '_blank');
+            }
+          };
+        }
+
         var guiLayer = GUI.createBasic("polygon_".concat(resp._id), resp.name, function () {
           // Intentar no usar capas para esto, solo hay 32 layers como tal en three
           console.log("Apagar este polygon");
-        });
+        }, optionsLayer);
         GUI.add(guiLayer, '#polygons .gui__group__content');
         console.log('Added', resp);
       }).catch(function (error) {

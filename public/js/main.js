@@ -223,26 +223,30 @@ function loadProject(){
     for( let polygon of polygons ){
       console.log(polygon)
 
-      let guiLayer = GUI.createBasic(`polygon_${polygon.id}`, polygon.name, function(){
-        // Intentar no usar capas para esto, solo hay 32 layers como tal en three
-        console.log("Apagar este polygon")
-      }, {
-        edit: {
+      let optionsLayer = {
+        edit:{
           'name': 'Edit',
           'image': '/styles/icons/menu_3puntosVertical.svg',
           'event': function(){
             console.log("Open element menu")
           }
-        },
-        openLink: {
+        }
+      }
+      if(polygon.link){
+        optionsLayer.openLink = {
           'name': 'Open link',
           'image': '/styles/icons/link.svg',
           'event': function(){
             console.log("Open link")
-            window.open(polygon.link, '_blank')
+            window.open(resp.link, '_blank')
           }
         }
-      })
+      }
+
+      let guiLayer = GUI.createBasic(`polygon_${polygon.id}`, polygon.name, function(){
+        // Intentar no usar capas para esto, solo hay 32 layers como tal en three
+        console.log("Apagar este polygon")
+      }, optionsLayer )
       
       GUI.add(guiLayer,'#polygons .gui__group__content')
 
@@ -392,11 +396,30 @@ function keyPress(e){
         // Añadir poligono en gui y dejarlo bien, sin puntos en los vertices etc
         // Podria añadirlo sin mas o recargar la lista
         
-        // Esto está repetido de mas arriba
+        // !! Esto está repetido de mas arriba. Hacer refactor de la creación de capas
+        let optionsLayer = {
+          edit:{
+            'name': 'Edit',
+            'image': '/styles/icons/menu_3puntosVertical.svg',
+            'event': function(){
+              console.log("Open element menu")
+            }
+          }
+        }
+        if(resp.link){
+          optionsLayer.openLink = {
+            'name': 'Open link',
+            'image': '/styles/icons/link.svg',
+            'event': function(){
+              console.log("Open link")
+              window.open(resp.link, '_blank')
+            }
+          }
+        }
         let guiLayer = GUI.createBasic(`polygon_${resp._id}`, resp.name, function(){
           // Intentar no usar capas para esto, solo hay 32 layers como tal en three
           console.log("Apagar este polygon")
-        })
+        }, optionsLayer )
         GUI.add(guiLayer,'#polygons .gui__group__content')
 
 
