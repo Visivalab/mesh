@@ -14,16 +14,17 @@ import { GammaCorrectionShader } from 'three/examples/jsm/shaders/GammaCorrectio
 import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
 
 // Variables globales de threejs
-let renderer, scene, camera, controls, ambientLight;
+let renderer, scene, camera, controls, ambientLight
 const raycaster = new THREE.Raycaster()
 const mouse = new THREE.Vector2()
 
-// Variables globales para trabajar con shaders (outline)
-let composer, outlinePass;
+// Variables globales para trabajar con shaders (el outline al pulsar un polígono)
+let composer, outlinePass
 // Variables globales para elementos de la interfaz que se necesitan a menudo
-let container, mainGui;
+let container, mainGui
 // Variables globales donde guardar un array con los objetos en escena, para poder verlos y modificarlos siempre
-let scenePolygons = {};
+let scenePolygons = {}
+//let sceneMeshes = {}
 // Variable global para guardar el id del proyecto, que viene en la url
 let pathProjectId = window.location.pathname.split('/').pop()
 
@@ -95,13 +96,13 @@ const modals = {
     savePolygonModal.addInput({ type: 'text', id: 'polygonLink', name: 'polygonLink', placeholder: 'link' })
     savePolygonModal.addButton({ text:'Save', color:'green', focus: false, key: 'Enter' }, function(){
       polygonModule.savePolygonInfo()
-      polygonModule.cleanPolygonCreated(false)
+      polygonModule.cleanPolygonCreated()
       
       savePolygonModal.close()
       render()
     })
     savePolygonModal.addButton({text:'Cancel',color:'red',focus:false}, function(){
-      polygonModule.cleanPolygonCreated(true)
+      polygonModule.cleanPolygonCreated()
 
       savePolygonModal.close()
       render()
@@ -293,9 +294,14 @@ function loadPolygons(polygons){
   for( let polygon of polygons ){
     addGUIPolygon(polygon)
     let geometry = generatePolygon(polygon.points)
+
     scene.add( geometry )
-    scenePolygons[polygon._id] = geometry
+    scenePolygons[polygon._id] = {
+      data: polygon,
+      geometry
+    }
   }
+  console.log(scenePolygons)
 }
 
 function loadSingleMesh(id,data){
@@ -380,26 +386,15 @@ const polygonModule = (function(){
   
 
 
-  // !! Está aquí por comodidad, no sé si pertenece aquí
-  
-
-  
-
-  //effectFXAA = new ShaderPass( FXAAShader );
-  //effectFXAA.uniforms[ 'resolution' ].value.set( 1 / window.innerWidth, 1 / window.innerHeight );
-  //composer.addPass( effectFXAA );
-
+  // !! Está aquí por comodidad, no sé si deberia pertenecer aquí
   container.addEventListener('click',selectElement)
   function selectElement(e){
-    
     const intersects = intersections(e.clientX, e.clientY)
-    //console.log(intersects)
     for(let intersected of intersects){
       if(intersected.object.sceneType === 'polygon'){
         showPolygonInfo(e.offsetX, e.offsetY, intersected.object.uuid)          
         highlight3DObject(intersected.object)
       }
-
     }
   }
   function closeAllFreemodals(){
@@ -411,6 +406,21 @@ const polygonModule = (function(){
     freeModal.className = 'freeModal'
     freeModal.style.top = `${y-50}px`
     freeModal.style.left = `${x+20}px`
+  
+
+    
+    // !! poner en funcion - Traverse elementos de scenePolygons para ver cual tiene esta geometria y poder cargar su data
+    let polygonData;
+    for(let scenePolygonID in scenePolygons){
+      if(scenePolygons[scenePolygonID].geometry.uuid === id){
+        polygonData = scenePolygons[scenePolygonID].data
+      }
+    }
+    freeModal.innerHTML = `Name: ${polygonData.name}
+    Link: ${polygonData.link}`
+
+
+
     document.querySelector('body').appendChild(freeModal)
   }
 
@@ -518,17 +528,16 @@ const polygonModule = (function(){
     })
     .then( res => res.json() )
     .then( resp => { 
-      addGUIPolygon(resp) 
+      loadPolygons([resp])
     })
     .catch( error => console.error(error) )
   }
   
-  function cleanPolygonCreated(all){
-    if(all){
-      for(let polygon of newPolygons) scene.remove(polygon)
-      newPolygons = []
-    }
+  function cleanPolygonCreated(){
+    for(let polygon of newPolygons) scene.remove(polygon)
     for(let point of clickingPoints) scene.remove(point)
+    
+    newPolygons = []
     newPolygonVertices = []
     clickingPoints = []
   }
@@ -594,12 +603,12 @@ function generatePolygon(vertices){
 
   let createdPolygon = new THREE.Mesh( geometry, geometrymaterial )
   createdPolygon.sceneType = 'polygon' // Le añadimos esta propiedad para que quede constancia en algun lado de que es un poligono. Nos servirá para cuando se pulse con el ratón para seleccionarlo
-
+  
   return createdPolygon
 }
 /* Resalta el elemento 3D en la escena de three */
 function highlight3DObject(object){
-  console.log("Highlight ", object)
+  //console.log("Highlight ", object)
   outlinePass.selectedObjects = [object];
   render()
 }

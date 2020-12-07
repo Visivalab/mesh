@@ -53058,13 +53058,14 @@ OutlinePass.BlurDirectionY = new Vector2( 0.0, 1.0 );
 
 var renderer, scene, camera, controls, ambientLight;
 var raycaster = new Raycaster();
-var mouse = new Vector2(); // Variables globales para trabajar con shaders (outline)
+var mouse = new Vector2(); // Variables globales para trabajar con shaders (el outline al pulsar un polígono)
 
 var composer, outlinePass; // Variables globales para elementos de la interfaz que se necesitan a menudo
 
 var container, mainGui; // Variables globales donde guardar un array con los objetos en escena, para poder verlos y modificarlos siempre
 
-var scenePolygons = {}; // Variable global para guardar el id del proyecto, que viene en la url
+var scenePolygons = {}; //let sceneMeshes = {}
+// Variable global para guardar el id del proyecto, que viene en la url
 
 var pathProjectId = window.location.pathname.split('/').pop(); // Objeto que define la creación de cada modal, para poder encontrarla y editarla facilmente
 // No estoy muy seguro de la utilidad o practicidad real de esto
@@ -53184,7 +53185,7 @@ var modals = {
       key: 'Enter'
     }, function () {
       polygonModule.savePolygonInfo();
-      polygonModule.cleanPolygonCreated(false);
+      polygonModule.cleanPolygonCreated();
       savePolygonModal.close();
       render();
     });
@@ -53193,7 +53194,7 @@ var modals = {
       color: 'red',
       focus: false
     }, function () {
-      polygonModule.cleanPolygonCreated(true);
+      polygonModule.cleanPolygonCreated();
       savePolygonModal.close();
       render();
     });
@@ -53362,13 +53363,18 @@ function loadPolygons(polygons) {
       addGUIPolygon(polygon);
       var geometry = generatePolygon(polygon.points);
       scene.add(geometry);
-      scenePolygons[polygon._id] = geometry;
+      scenePolygons[polygon._id] = {
+        data: polygon,
+        geometry: geometry
+      };
     }
   } catch (err) {
     _iterator.e(err);
   } finally {
     _iterator.f();
   }
+
+  console.log(scenePolygons);
 }
 
 function loadSingleMesh(id, data) {
@@ -53442,15 +53448,12 @@ var polygonModule = function () {
   var newPolygons = []; // Para poderlos borrar cuadno se cancela, hay que guardar la instancia en algun lado
 
   var clickingPoints = []; // Para poderlos borrar cuando se cancela, hay que guardar la instancia en algun lado
-  // !! Está aquí por comodidad, no sé si pertenece aquí
-  //effectFXAA = new ShaderPass( FXAAShader );
-  //effectFXAA.uniforms[ 'resolution' ].value.set( 1 / window.innerWidth, 1 / window.innerHeight );
-  //composer.addPass( effectFXAA );
+  // !! Está aquí por comodidad, no sé si deberia pertenecer aquí
 
   container.addEventListener('click', selectElement);
 
   function selectElement(e) {
-    var intersects = intersections(e.clientX, e.clientY); //console.log(intersects)
+    var intersects = intersections(e.clientX, e.clientY);
 
     var _iterator2 = _createForOfIteratorHelper(intersects),
         _step2;
@@ -53488,11 +53491,22 @@ var polygonModule = function () {
   }
 
   function showPolygonInfo(x, y) {
+    var id = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
     closeAllFreemodals();
     var freeModal = document.createElement('div');
     freeModal.className = 'freeModal';
     freeModal.style.top = "".concat(y - 50, "px");
-    freeModal.style.left = "".concat(x + 20, "px");
+    freeModal.style.left = "".concat(x + 20, "px"); // !! poner en funcion - Traverse elementos de scenePolygons para ver cual tiene esta geometria y poder cargar su data
+
+    var polygonData;
+
+    for (var scenePolygonID in scenePolygons) {
+      if (scenePolygons[scenePolygonID].geometry.uuid === id) {
+        polygonData = scenePolygons[scenePolygonID].data;
+      }
+    }
+
+    freeModal.innerHTML = "Name: ".concat(polygonData.name, "\n    Link: ").concat(polygonData.link);
     document.querySelector('body').appendChild(freeModal);
   }
 
@@ -53599,29 +53613,25 @@ var polygonModule = function () {
     }).then(function (res) {
       return res.json();
     }).then(function (resp) {
-      addGUIPolygon(resp);
+      loadPolygons([resp]);
     }).catch(function (error) {
       return console.error(error);
     });
   }
 
-  function cleanPolygonCreated(all) {
-    if (all) {
-      var _iterator4 = _createForOfIteratorHelper(newPolygons),
-          _step4;
+  function cleanPolygonCreated() {
+    var _iterator4 = _createForOfIteratorHelper(newPolygons),
+        _step4;
 
-      try {
-        for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
-          var polygon = _step4.value;
-          scene.remove(polygon);
-        }
-      } catch (err) {
-        _iterator4.e(err);
-      } finally {
-        _iterator4.f();
+    try {
+      for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
+        var polygon = _step4.value;
+        scene.remove(polygon);
       }
-
-      newPolygons = [];
+    } catch (err) {
+      _iterator4.e(err);
+    } finally {
+      _iterator4.f();
     }
 
     var _iterator5 = _createForOfIteratorHelper(clickingPoints),
@@ -53638,6 +53648,7 @@ var polygonModule = function () {
       _iterator5.f();
     }
 
+    newPolygons = [];
     newPolygonVertices = [];
     clickingPoints = [];
   }
@@ -53720,7 +53731,7 @@ function generatePolygon(vertices) {
 
 
 function highlight3DObject(object) {
-  console.log("Highlight ", object);
+  //console.log("Highlight ", object)
   outlinePass.selectedObjects = [object];
   render();
 }
