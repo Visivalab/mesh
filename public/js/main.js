@@ -170,7 +170,10 @@ function createRenderer(){
 function createComposer(){
   /* El composer es necesario para aplicar shaders, como el outline cuando se selecciona un elemento.
   A partir de ahora, no se usa renderer para renderizar una escena, sino composer, que en uno de sus pases aplica renderer */
-  // !! Hay un problema en three con el addPass (creo entender) que se carga el color de las texturas, por eso hay que aplicar el GammaCorrectionShader 
+  // !! Hay un problema en three con el addPass (creo entender) que se carga el color de las texturas, el gamma y noseque, por eso hay que aplicar el GammaCorrectionShader 
+  // https://discourse.threejs.org/t/srgbencoding-with-post-processing/12582
+  // https://discourse.threejs.org/t/effect-composer-gamma-output-difference/12039
+  
   composer = new EffectComposer( renderer )
   const renderPass = new RenderPass( scene, camera )
   outlinePass = new OutlinePass( new THREE.Vector2( window.innerWidth, window.innerHeight ), scene, camera )
