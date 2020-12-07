@@ -53448,7 +53448,7 @@ var polygonModule = function () {
   var newPolygons = []; // Para poderlos borrar cuadno se cancela, hay que guardar la instancia en algun lado
 
   var clickingPoints = []; // Para poderlos borrar cuando se cancela, hay que guardar la instancia en algun lado
-  // !! Está aquí por comodidad, no sé si deberia pertenecer aquí
+  // !! TODO ESTO Está aquí por comodidad, no sé si deberia pertenecer aquí
 
   container.addEventListener('click', selectElement);
 
@@ -53504,11 +53504,22 @@ var polygonModule = function () {
       if (scenePolygons[scenePolygonID].geometry.uuid === id) {
         polygonData = scenePolygons[scenePolygonID].data;
       }
+    } // !! Pensar bien un constructor de freeModals, o aprovechar modal
+
+
+    freeModal.innerHTML = "\n    <h3>".concat(polygonData.name, "</h3>\n    <p>...</p>\n    <br>\n    ");
+
+    if (polygonData.link) {
+      var link = document.createElement('a');
+      link.href = polygonData.link;
+      link.target = '_blank';
+      link.textContent = 'Link';
+      freeModal.appendChild(link);
     }
 
-    freeModal.innerHTML = "Name: ".concat(polygonData.name, "\n    Link: ").concat(polygonData.link);
     document.querySelector('body').appendChild(freeModal);
-  }
+  } // !! el TODO ESTO es hasta aquí
+
 
   function initPolygonCreation() {
     container.addEventListener('click', newPolygonPoint);

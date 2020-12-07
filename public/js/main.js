@@ -386,7 +386,7 @@ const polygonModule = (function(){
   
 
 
-  // !! Está aquí por comodidad, no sé si deberia pertenecer aquí
+  // !! TODO ESTO Está aquí por comodidad, no sé si deberia pertenecer aquí
   container.addEventListener('click',selectElement)
   function selectElement(e){
     const intersects = intersections(e.clientX, e.clientY)
@@ -416,14 +416,27 @@ const polygonModule = (function(){
         polygonData = scenePolygons[scenePolygonID].data
       }
     }
-    freeModal.innerHTML = `Name: ${polygonData.name}
-    Link: ${polygonData.link}`
+    
+    // !! Pensar bien un constructor de freeModals, o aprovechar modal
+    freeModal.innerHTML = `
+    <h3>${polygonData.name}</h3>
+    <p>...</p>
+    <br>
+    `
+    if(polygonData.link){
+      let link = document.createElement('a')
+      link.href = polygonData.link
+      link.target = '_blank'
+      link.textContent = 'Link'
 
-
-
+      freeModal.appendChild(link)
+    }
+    
+    
     document.querySelector('body').appendChild(freeModal)
   }
-
+  // !! el TODO ESTO es hasta aquí
+  
 
 
 
