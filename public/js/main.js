@@ -7,11 +7,19 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader';
 
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
+import { GammaCorrectionShader } from 'three/examples/jsm/shaders/GammaCorrectionShader.js';
+import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
+
 // Variables globales de threejs
 let renderer, scene, camera, controls, ambientLight;
 const raycaster = new THREE.Raycaster()
 const mouse = new THREE.Vector2()
 
+// Variables globales para trabajar con shaders (outline)
+let composer, outlinePass;
 // Variables globales para elementos de la interfaz que se necesitan a menudo
 let container, mainGui;
 // Variables globales donde guardar un array con los objetos en escena, para poder verlos y modificarlos siempre
@@ -126,7 +134,7 @@ function disableAllLayers(){
 
 function createLights(){
 
-  ambientLight = new THREE.AmbientLight( 0xffffff, 1.5 );
+  ambientLight = new THREE.AmbientLight( 0xffffff, 2 );
   scene.add( ambientLight );
 
 }
@@ -150,10 +158,42 @@ function createRenderer(){
 
   //Esto y el antialias le da a saco de calidad al render, pero no sé exactamente como
   //renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1;
+  //renderer.toneMappingExposure = 1;
+  //renderer.gammaOutput = true;
+  //renderer.gammaFactor = 2.2;
   renderer.outputEncoding = THREE.sRGBEncoding;
 
   container.appendChild( renderer.domElement );
+
+}
+
+function createComposer(){
+  /* El composer es necesario para aplicar shaders, como el outline cuando se selecciona un elemento.
+  A partir de ahora, no se usa renderer para renderizar una escena, sino composer, que en uno de sus pases aplica renderer */
+  // !! Hay un problema en three con el addPass (creo entender) que se carga el color de las texturas, por eso hay que aplicar el GammaCorrectionShader 
+  composer = new EffectComposer( renderer )
+  const renderPass = new RenderPass( scene, camera )
+  outlinePass = new OutlinePass( new THREE.Vector2( window.innerWidth, window.innerHeight ), scene, camera )
+  const gammaCorrectionPass = new ShaderPass( GammaCorrectionShader );
+
+  outlinePass.renderToScreen = true
+  outlinePass.selectedObjects = []
+  
+  composer.addPass( renderPass )
+  composer.addPass( outlinePass )
+  composer.addPass( gammaCorrectionPass );
+
+  let params = {
+    edgeStrength: 2,
+    edgeGlow: 1,
+    edgeThickness: 1.0,
+    pulsePeriod: 0,
+    usePatternTexture: false
+  };
+  outlinePass.edgeStrength = params.edgeStrength;
+  outlinePass.edgeGlow = params.edgeGlow;
+  outlinePass.visibleEdgeColor.set(0xffffff);
+  outlinePass.hiddenEdgeColor.set(0xff00ff);
 
 }
 
@@ -168,7 +208,8 @@ function onWindowResize() {
 }
 
 function render() {
-  renderer.render( scene, camera );
+  //renderer.render( scene, camera );
+  composer.render(scene, camera)
 }
 
 function init() {
@@ -184,6 +225,7 @@ function init() {
   createLights();
   createRenderer();
   setControls();
+  createComposer();
 
   // Creación de la interfaz. Hay que crearla antes de cargar el proyecto porque se ponen los layers cargados dentro de ella
   createGui();
@@ -263,8 +305,8 @@ function loadSingleMesh(id,data){
 
   
   api_loader.load(
-    //'/public/meshes/teatro_decimated.glb',
-    data.url,
+    '/public/meshes/teatro_decimated.glb',
+    //data.url,
     function(glb){
       console.group('Loading layer')
       console.log("DB layer info: ", data)
@@ -325,7 +367,6 @@ function addGUIPolygon(polygon){
   GUI.add(guiElement,'#polygons .gui__group__content')
 }
 
-
 /* Módulo de CONTROL de CREACIÓN/MODIFICACIÓN/BORRAción.. de los polígonos */
 const polygonModule = (function(){
 
@@ -333,6 +374,47 @@ const polygonModule = (function(){
   let newPolygons = [] // Para poderlos borrar cuadno se cancela, hay que guardar la instancia en algun lado
   let clickingPoints = [] // Para poderlos borrar cuando se cancela, hay que guardar la instancia en algun lado
   
+  
+
+
+  // !! Está aquí por comodidad, no sé si pertenece aquí
+  
+
+  
+
+  //effectFXAA = new ShaderPass( FXAAShader );
+  //effectFXAA.uniforms[ 'resolution' ].value.set( 1 / window.innerWidth, 1 / window.innerHeight );
+  //composer.addPass( effectFXAA );
+
+  container.addEventListener('click',selectElement)
+  function selectElement(e){
+    
+    const intersects = intersections(e.clientX, e.clientY)
+    //console.log(intersects)
+    for(let intersected of intersects){
+      if(intersected.object.sceneType === 'polygon'){
+        showPolygonInfo(e.offsetX, e.offsetY, intersected.object.uuid)          
+        highlight3DObject(intersected.object)
+      }
+
+    }
+  }
+  function closeAllFreemodals(){
+    for(let freeModal of document.querySelectorAll('.freeModal')) freeModal.remove()
+  }
+  function showPolygonInfo(x,y,id = null){
+    closeAllFreemodals()
+    let freeModal = document.createElement('div')
+    freeModal.className = 'freeModal'
+    freeModal.style.top = `${y-50}px`
+    freeModal.style.left = `${x+20}px`
+    document.querySelector('body').appendChild(freeModal)
+  }
+
+
+
+
+
   function initPolygonCreation(){
     container.addEventListener('click', newPolygonPoint)
     container.addEventListener('keypress', saveCreatedPolygon)
@@ -508,6 +590,13 @@ function generatePolygon(vertices){
   });
 
   let createdPolygon = new THREE.Mesh( geometry, geometrymaterial )
+  createdPolygon.sceneType = 'polygon' // Le añadimos esta propiedad para que quede constancia en algun lado de que es un poligono. Nos servirá para cuando se pulse con el ratón para seleccionarlo
 
   return createdPolygon
+}
+/* Resalta el elemento 3D en la escena de three */
+function highlight3DObject(object){
+  console.log("Highlight ", object)
+  outlinePass.selectedObjects = [object];
+  render()
 }

@@ -71,3 +71,10 @@ button:focus{
   justify-content: space-around;
   margin-top: 25px;
 }
+
+.freeModal{
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  background-color: white;
+}
