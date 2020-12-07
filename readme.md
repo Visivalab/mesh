@@ -2,7 +2,6 @@
 
 #### Tareas principales restantes ####
 - [ ] Selector de capa cuando se pulsa sobre varias capas distintas
-- [ ] Borrar objeto de la escena cuando se borra el polígono (y de scenePolygons)
 - [ ] Abrir opciones y link desde free modal
 - [ ] Funcionalidad encender/apagar polígonos
 

@@ -408,7 +408,7 @@ const polygonModule = (function(){
     freeModal.style.left = `${x+20}px`
   
 
-    
+
     // !! poner en funcion - Traverse elementos de scenePolygons para ver cual tiene esta geometria y poder cargar su data
     let polygonData;
     for(let scenePolygonID in scenePolygons){
@@ -507,7 +507,7 @@ const polygonModule = (function(){
       document.querySelector(`#polygon_${resp._id}`).remove()
 
       // !! Hay que quitarlo tambien del objeto scenePolygons
-      scene.remove(scenePolygons[resp._id])
+      scene.remove(scenePolygons[resp._id].geometry)
       render()
     })
   }

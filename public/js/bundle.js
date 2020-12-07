@@ -53592,7 +53592,7 @@ var polygonModule = function () {
 
       document.querySelector("#polygon_".concat(resp._id)).remove(); // !! Hay que quitarlo tambien del objeto scenePolygons
 
-      scene.remove(scenePolygons[resp._id]);
+      scene.remove(scenePolygons[resp._id].geometry);
       render();
     });
   }
