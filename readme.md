@@ -4,6 +4,7 @@
 - [ ] Selector de capa cuando se pulsa sobre varias capas distintas
 - [ ] Abrir opciones y link desde free modal
 - [ ] Funcionalidad encender/apagar polígonos
+- [ ] Guardar las caras earcut en db para que no se tengan que generar en cada polígono al cargar
 
 #### Tareas secundarias ####
 - [ ] Automatizar backups en mongodb estaria bien, por si acaso
