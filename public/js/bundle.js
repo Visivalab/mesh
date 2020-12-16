@@ -53385,7 +53385,7 @@ function loadSingleMesh(id, data) {
 
   api_loader.setDRACOLoader(dracoLoader); // Carga elementos de aws que agarra de la base de datos
 
-  api_loader.load('/public/meshes/teatro_decimated.glb', //data.url,
+  api_loader.load('/public/meshes/cube10x10.glb', //data.url,
   function (glb) {
     console.group('Loading layer');
     console.log("DB layer info: ", data);
@@ -53444,6 +53444,7 @@ function addGUIPolygon(polygon) {
 
 
 var polygonModule = function () {
+  var prevVertice;
   var newPolygonVertices = [];
   var newPolygons = []; // Para poderlos borrar cuadno se cancela, hay que guardar la instancia en algun lado
 
@@ -53532,11 +53533,17 @@ var polygonModule = function () {
   }
 
   function newPolygonPoint(event) {
+    var _prevVertice;
+
     var intersects = intersections(event.clientX, event.clientY);
     var _ref = [intersects[0].point.x, intersects[0].point.y, intersects[0].point.z],
         px = _ref[0],
         py = _ref[1],
         pz = _ref[2];
+    console.log("Intersection: ", intersects[0].point);
+    var distanceFromPrev = (_prevVertice = prevVertice) === null || _prevVertice === void 0 ? void 0 : _prevVertice.distanceTo(intersects[0].point);
+    console.log(distanceFromPrev);
+    prevVertice = intersects[0].point;
     var point = createPoint();
     clickingPoints.push(point);
     scene.add(point);

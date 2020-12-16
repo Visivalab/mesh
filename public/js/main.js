@@ -314,7 +314,7 @@ function loadSingleMesh(id,data){
 
   
   api_loader.load(
-    '/public/meshes/teatro_decimated.glb',
+    '/public/meshes/cube10x10.glb',
     //data.url,
     function(glb){
       console.group('Loading layer')
@@ -379,6 +379,7 @@ function addGUIPolygon(polygon){
 /* Módulo de CONTROL de CREACIÓN/MODIFICACIÓN/BORRAción.. de los polígonos */
 const polygonModule = (function(){
 
+  let prevVertice;
   let newPolygonVertices = []
   let newPolygons = [] // Para poderlos borrar cuadno se cancela, hay que guardar la instancia en algun lado
   let clickingPoints = [] // Para poderlos borrar cuando se cancela, hay que guardar la instancia en algun lado
@@ -456,6 +457,14 @@ const polygonModule = (function(){
     const intersects = intersections(event.clientX, event.clientY)
     let [px,py,pz] = [intersects[0].point.x, intersects[0].point.y, intersects[0].point.z]
     
+
+    console.log("Intersection: ",intersects[0].point)
+    let distanceFromPrev = prevVertice?.distanceTo(intersects[0].point)
+    console.log(distanceFromPrev)
+    prevVertice = intersects[0].point
+
+
+
     let point = createPoint()
     clickingPoints.push(point)
     scene.add(point)
@@ -463,6 +472,8 @@ const polygonModule = (function(){
   
     newPolygonVertices.push({x:px,y:py,z:pz})
   
+
+
     if(newPolygonVertices.length >= 3){ 
       let newPolygon = generatePolygon(newPolygonVertices)
       newPolygons.push(newPolygon)   
