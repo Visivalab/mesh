@@ -46030,6 +46030,42 @@ Modal.prototype.close = function () {
   if (this.background) document.querySelector('.modal__background').remove();
 };
 
+function ToolViewer(options) {
+  this.position = options.position || 'left';
+  this.title = options.title || 'Tool';
+  this.id = options.id || null;
+}
+
+ToolViewer.prototype.mount = function () {
+  if (!this.id) {
+    console.error('El toolViewer no tiene id');
+    return;
+  }
+
+  var toolViewerElement = document.createElement('div');
+  toolViewerElement.id = this.id;
+  toolViewerElement.className = 'toolViewer';
+  document.querySelector('body').appendChild(toolViewerElement);
+};
+
+ToolViewer.prototype.addHTML = function (html) {
+  var section = document.createElement('div');
+  section.innerHTML = html;
+  console.log("#".concat(this.id));
+  document.querySelector("#".concat(this.id)).appendChild(section);
+};
+
+ToolViewer.prototype.addButton = function (options) {
+  var button = document.createElement('button');
+  button.textContent = options.text;
+  button.addEventListener('click', options.action);
+  document.querySelector("#".concat(this.id)).appendChild(button);
+};
+
+ToolViewer.prototype.close = function (options) {
+  document.querySelector("#".concat(this.id)).remove();
+};
+
 // This set of controls performs orbiting, dollying (zooming), and panning.
 // Unlike TrackballControls, it maintains the "up" direction object.up (+Y by default).
 //
@@ -53440,14 +53476,56 @@ var polygonModule = function () {
 
 var rulerModule = function () {
   var prevVertice;
+  var rulerDistances = [];
+  var clickingPoints = [];
+  var toolViewer_ruler;
 
   function initRulerCreation() {
     console.log("Iniciar ruler");
+    toolViewer_ruler = new ToolViewer({
+      title: 'Ruler',
+      id: 'toolViewer_ruler'
+    });
+    toolViewer_ruler.mount();
+    toolViewer_ruler.addHTML("\n      <p>Total: <span class=\"rulerTotalResult\">0</span>m</p>\n      <p>Last: <span class=\"rulerLastResult\">0</span>m</p>\n    ");
+    toolViewer_ruler.addButton({
+      text: 'Save',
+      action: function action() {
+        stopRulerCreation();
+        console.log("SAVEEEEEEE");
+      }
+    });
+    toolViewer_ruler.addButton({
+      text: 'Cancel',
+      action: function action() {
+        stopRulerCreation();
+        console.log("CANCEL RULER");
+      }
+    });
     container.addEventListener('click', newRulerPoint);
     container.addEventListener('keypress', saveCreatedRuler);
   }
 
   function stopRulerCreation() {
+    var _iterator5 = _createForOfIteratorHelper(clickingPoints),
+        _step5;
+
+    try {
+      for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
+        var point = _step5.value;
+        scene.remove(point);
+      }
+    } catch (err) {
+      _iterator5.e(err);
+    } finally {
+      _iterator5.f();
+    }
+
+    clickingPoints = [];
+    rulerDistances = [];
+    prevVertice = undefined;
+    toolViewer_ruler.close();
+    render();
     container.removeEventListener('click', newRulerPoint);
     container.removeEventListener('keypress', saveCreatedRuler);
   }
@@ -53471,12 +53549,22 @@ var rulerModule = function () {
         py = _ref2[1],
         pz = _ref2[2];
     var point = createPoint();
+    clickingPoints.push(point);
     scene.add(point);
     point.position.set(px, py, pz);
-    console.log("Intersection: ", intersects[0].point);
     var distanceFromPrev = (_prevVertice = prevVertice) === null || _prevVertice === void 0 ? void 0 : _prevVertice.distanceTo(intersects[0].point);
-    console.log(distanceFromPrev);
     prevVertice = intersects[0].point;
+    var totalResult = document.querySelector('.rulerTotalResult');
+    var lastResult = document.querySelector('.rulerLastResult');
+
+    if (distanceFromPrev) {
+      rulerDistances.push(distanceFromPrev);
+      totalResult.textContent = rulerDistances.reduce(function (accumulator, currentValue) {
+        return accumulator + currentValue;
+      }).toFixed(2);
+      lastResult.textContent = distanceFromPrev.toFixed(2);
+    }
+
     render();
   }
 
@@ -53643,12 +53731,12 @@ function loadMeshes(meshes) {
 }
 
 function loadPolygons(polygons) {
-  var _iterator5 = _createForOfIteratorHelper(polygons),
-      _step5;
+  var _iterator6 = _createForOfIteratorHelper(polygons),
+      _step6;
 
   try {
-    for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
-      var polygon = _step5.value;
+    for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
+      var polygon = _step6.value;
       addGUIPolygon(polygon);
       var geometry = generatePolygon(polygon.points);
       scene.add(geometry);
@@ -53658,9 +53746,9 @@ function loadPolygons(polygons) {
       };
     }
   } catch (err) {
-    _iterator5.e(err);
+    _iterator6.e(err);
   } finally {
-    _iterator5.f();
+    _iterator6.f();
   }
 
   console.log(scenePolygons);
@@ -53674,7 +53762,7 @@ function loadSingleMesh(id, data) {
 
   api_loader.setDRACOLoader(dracoLoader); // Carga elementos de aws que agarra de la base de datos
 
-  api_loader.load( data.url, // cambiar localMeshRoute a true para ver meshes de local en vez de las que vienen de la ruta de aws 
+  api_loader.load( '/public/meshes/cube10x10.glb' , // cambiar localMeshRoute a true para ver meshes de local en vez de las que vienen de la ruta de aws 
   function (glb) {
     console.group('Loading layer');
     console.log("DB layer info: ", data);
@@ -53742,19 +53830,19 @@ function generatePolygon(vertices) {
   var earcutVertices = [];
   var geometryVertices = [];
 
-  var _iterator6 = _createForOfIteratorHelper(vertices),
-      _step6;
+  var _iterator7 = _createForOfIteratorHelper(vertices),
+      _step7;
 
   try {
-    for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
-      var vertice = _step6.value;
+    for (_iterator7.s(); !(_step7 = _iterator7.n()).done;) {
+      var vertice = _step7.value;
       geometryVertices.push(new Vector3(vertice.x, vertice.y, vertice.z));
       earcutVertices = earcutVertices.concat([vertice.x, vertice.y, vertice.z]);
     }
   } catch (err) {
-    _iterator6.e(err);
+    _iterator7.e(err);
   } finally {
-    _iterator6.f();
+    _iterator7.f();
   }
 
   var triangleVertexs = earcut_1(earcutVertices, null, 3); // earcut retorna un array con los indices de los vertices de cada triangulo - [1,0,3, 3,2,1] -

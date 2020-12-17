@@ -80,3 +80,15 @@ button:focus{
   box-shadow: 0px 0px 10px 0px rgba(0,0,0,0.1);
   padding: 20px;
 }
+
+
+/* Tool viewer */
+.toolViewer{
+  min-width: 100px;
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  background-color: white;
+  border-radius: 20px;
+  padding: 15px;
+}

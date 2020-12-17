@@ -2,6 +2,7 @@ import * as THREE from 'three'; // https://threejs.org/docs/#api/en/loaders/Load
 import earcut from 'earcut';
 import {GUI} from './gui';
 import {Modal} from './modal';
+import {ToolViewer} from './toolViewer';
 
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -28,7 +29,7 @@ let scenePolygons = {}
 // Variable global para guardar el id del proyecto, que viene en la url
 let pathProjectId = window.location.pathname.split('/').pop()
 
-let localMeshRoute = false // cambiar localMeshRoute a true para ver meshes de local en vez de las que vienen de la ruta de aws 
+let localMeshRoute = true // cambiar localMeshRoute a true para ver meshes de local en vez de las que vienen de la ruta de aws 
 
 // Objeto que define la creación de cada modal, para poder encontrarla y editarla facilmente
 // No estoy muy seguro de la utilidad o practicidad real de esto
@@ -304,16 +305,52 @@ const polygonModule = (function(){
 const rulerModule = (function(){
   
   let prevVertice
+  let rulerDistances = []
   let clickingPoints = []
+
+  let toolViewer_ruler
 
   function initRulerCreation(){
     console.log("Iniciar ruler")
+
+    toolViewer_ruler = new ToolViewer({
+      title:'Ruler',
+      id: 'toolViewer_ruler'
+    })
+    toolViewer_ruler.mount()
+    toolViewer_ruler.addHTML(`
+      <p>Total: <span class="rulerTotalResult">0</span>m</p>
+      <p>Last: <span class="rulerLastResult">0</span>m</p>
+    `)
+
+    toolViewer_ruler.addButton({
+      text: 'Save',
+      action: () => {
+        stopRulerCreation()
+        console.log("SAVEEEEEEE")
+      }
+    })
+    toolViewer_ruler.addButton({
+      text: 'Cancel',
+      action: () => {
+        stopRulerCreation()
+        console.log("CANCEL RULER")
+      }
+    })
 
     container.addEventListener('click', newRulerPoint)
     container.addEventListener('keypress', saveCreatedRuler)
   }
 
   function stopRulerCreation(){
+    for(let point of clickingPoints) scene.remove(point)
+    clickingPoints = []
+    rulerDistances = []
+    prevVertice = undefined
+
+    toolViewer_ruler.close()
+    render()
+
     container.removeEventListener('click', newRulerPoint)
     container.removeEventListener('keypress', saveCreatedRuler)
   }
@@ -337,10 +374,17 @@ const rulerModule = (function(){
     scene.add(point)
     point.position.set(px, py, pz)
 
-    console.log("Intersection: ",intersects[0].point)
     let distanceFromPrev = prevVertice?.distanceTo(intersects[0].point)
-    console.log(distanceFromPrev)
     prevVertice = intersects[0].point
+
+    let totalResult = document.querySelector('.rulerTotalResult')
+    let lastResult = document.querySelector('.rulerLastResult')
+
+    if(distanceFromPrev){
+      rulerDistances.push(distanceFromPrev)
+      totalResult.textContent = rulerDistances.reduce((accumulator, currentValue) => accumulator + currentValue).toFixed(2)
+      lastResult.textContent = distanceFromPrev.toFixed(2)
+    }
 
     render()
   }
