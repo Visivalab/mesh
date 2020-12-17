@@ -53067,7 +53067,8 @@ var container, mainGui; // Variables globales donde guardar un array con los obj
 var scenePolygons = {}; //let sceneMeshes = {}
 // Variable global para guardar el id del proyecto, que viene en la url
 
-var pathProjectId = window.location.pathname.split('/').pop(); // Objeto que define la creación de cada modal, para poder encontrarla y editarla facilmente
+var pathProjectId = window.location.pathname.split('/').pop();
+// Objeto que define la creación de cada modal, para poder encontrarla y editarla facilmente
 // No estoy muy seguro de la utilidad o practicidad real de esto
 // Además no puedo modificar o cerrar las modales desde otro lado porque no estan definidas fuera de este scope, que tampoco es del todo malo.
 
@@ -53200,6 +53201,290 @@ var modals = {
     });
   }
 };
+/* Módulo de CONTROL de CREACIÓN/MODIFICACIÓN/BORRAción.. de los polígonos */
+
+var polygonModule = function () {
+  var newPolygonVertices = [];
+  var newPolygons = []; // Para poderlos borrar cuadno se cancela hay que guardar la instancia en algun lado
+
+  var clickingPoints = []; // Para poderlos borrar cuando se cancela hay que guardar la instancia en algun lado
+  // !! TODO ESTO Está aquí por comodidad, no sé si deberia pertenecer aquí
+
+  function initPolygonSelection() {
+    container.addEventListener('click', selectElement);
+  }
+
+  function selectElement(e) {
+    var intersects = intersections(e.clientX, e.clientY);
+
+    var _iterator = _createForOfIteratorHelper(intersects),
+        _step;
+
+    try {
+      for (_iterator.s(); !(_step = _iterator.n()).done;) {
+        var intersected = _step.value;
+
+        if (intersected.object.sceneType === 'polygon') {
+          showPolygonInfo(e.offsetX, e.offsetY, intersected.object.uuid);
+          highlight3DObject(intersected.object);
+        }
+      }
+    } catch (err) {
+      _iterator.e(err);
+    } finally {
+      _iterator.f();
+    }
+  }
+
+  function closeAllFreemodals() {
+    var _iterator2 = _createForOfIteratorHelper(document.querySelectorAll('.freeModal')),
+        _step2;
+
+    try {
+      for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
+        var freeModal = _step2.value;
+        freeModal.remove();
+      }
+    } catch (err) {
+      _iterator2.e(err);
+    } finally {
+      _iterator2.f();
+    }
+  }
+
+  function showPolygonInfo(x, y) {
+    var id = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
+    closeAllFreemodals();
+    var freeModal = document.createElement('div');
+    freeModal.className = 'freeModal';
+    freeModal.style.top = "".concat(y - 50, "px");
+    freeModal.style.left = "".concat(x + 20, "px"); // !! poner en funcion - Traverse elementos de scenePolygons para ver cual tiene esta geometria y poder cargar su data
+
+    var polygonData;
+
+    for (var scenePolygonID in scenePolygons) {
+      if (scenePolygons[scenePolygonID].geometry.uuid === id) {
+        polygonData = scenePolygons[scenePolygonID].data;
+      }
+    } // !! Pensar bien un constructor de freeModals, o aprovechar modal
+
+
+    freeModal.innerHTML = "\n    <h3>".concat(polygonData.name, "</h3>\n    <p>...</p>\n    <br>\n    ");
+
+    if (polygonData.link) {
+      var link = document.createElement('a');
+      link.href = polygonData.link;
+      link.target = '_blank';
+      link.textContent = 'Link';
+      freeModal.appendChild(link);
+    }
+
+    document.querySelector('body').appendChild(freeModal);
+  } // !! el TODO ESTO es hasta aquí
+
+
+  function initPolygonCreation() {
+    container.addEventListener('click', newPolygonPoint);
+    container.addEventListener('keypress', saveCreatedPolygon);
+  }
+
+  function stopPolygonCreation() {
+    container.removeEventListener('click', newPolygonPoint);
+    container.removeEventListener('keypress', saveCreatedPolygon);
+  }
+
+  function newPolygonPoint(event) {
+    var intersects = intersections(event.clientX, event.clientY);
+    var _ref = [intersects[0].point.x, intersects[0].point.y, intersects[0].point.z],
+        px = _ref[0],
+        py = _ref[1],
+        pz = _ref[2];
+    var point = createPoint();
+    clickingPoints.push(point);
+    scene.add(point);
+    point.position.set(px, py, pz);
+    newPolygonVertices.push({
+      x: px,
+      y: py,
+      z: pz
+    });
+
+    if (newPolygonVertices.length >= 3) {
+      var newPolygon = generatePolygon(newPolygonVertices);
+      newPolygons.push(newPolygon);
+      scene.add(newPolygon); // !! Ver como No ir poniendo los polígonos uno encima de otro..
+    }
+
+    render();
+  }
+
+  function saveCreatedPolygon(e) {
+    if (e.key === "Enter") {
+      stopPolygonCreation();
+      modals.modalSavePolygon();
+    }
+  }
+
+  function saveUpdatedPolygon(polygon) {
+    fetch('/api/polygon/update', {
+      method: 'POST',
+      body: JSON.stringify({
+        id: polygon._id,
+        name: document.querySelector('#newName').value,
+        link: document.querySelector('#newLink').value
+      }),
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }).then(function (res) {
+      return res.json();
+    }).then(function (resp) {
+      console.log('Updated', resp); // !! Se coje tal cual. Molaria hacerlo con una funcion propia del GUI. Habria que pensar el gui como el modal, como un constructor con sus cosas propias
+
+      document.querySelector("#polygon_".concat(resp._id)).remove(); // !! No hay manera logica o facil de actualizar la capa existente ahora mismo. La solucion rapida es borrarla y meter una nueva
+      // El problema es que se pone al final siempre claro
+
+      addGUIPolygon(resp);
+    });
+  }
+
+  function deletePolygon(polygon) {
+    // !! Cuidado, se esta borrando el poligono pero no se está quitando de la lista de poligonos del proyecto
+    fetch('/api/polygon/delete', {
+      method: 'POST',
+      body: JSON.stringify({
+        id: polygon._id
+      }),
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }).then(function (res) {
+      return res.json();
+    }).then(function (resp) {
+      console.log('Deleted', resp); // !! Se coje tal cual. Molaria hacerlo con una funcion propia del GUI. Habria que pensar el gui como el modal, como un constructor con sus cosas propias
+
+      document.querySelector("#polygon_".concat(resp._id)).remove(); // !! Hay que quitarlo tambien del objeto scenePolygons
+
+      scene.remove(scenePolygons[resp._id].geometry);
+      render();
+    });
+  }
+
+  function savePolygonInfo() {
+    fetch('/api/polygon/save', {
+      method: 'POST',
+      body: JSON.stringify({
+        project: pathProjectId,
+        points: newPolygonVertices,
+        name: document.querySelector('#polygonName').value,
+        link: document.querySelector('#polygonLink').value,
+        color: 'green'
+      }),
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }).then(function (res) {
+      return res.json();
+    }).then(function (resp) {
+      loadPolygons([resp]);
+    }).catch(function (error) {
+      return console.error(error);
+    });
+  }
+
+  function cleanPolygonCreated() {
+    var _iterator3 = _createForOfIteratorHelper(newPolygons),
+        _step3;
+
+    try {
+      for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
+        var polygon = _step3.value;
+        scene.remove(polygon);
+      }
+    } catch (err) {
+      _iterator3.e(err);
+    } finally {
+      _iterator3.f();
+    }
+
+    var _iterator4 = _createForOfIteratorHelper(clickingPoints),
+        _step4;
+
+    try {
+      for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
+        var point = _step4.value;
+        scene.remove(point);
+      }
+    } catch (err) {
+      _iterator4.e(err);
+    } finally {
+      _iterator4.f();
+    }
+
+    newPolygons = [];
+    newPolygonVertices = [];
+    clickingPoints = [];
+  }
+
+  return {
+    initPolygonSelection: initPolygonSelection,
+    cleanPolygonCreated: cleanPolygonCreated,
+    savePolygonInfo: savePolygonInfo,
+    deletePolygon: deletePolygon,
+    saveUpdatedPolygon: saveUpdatedPolygon,
+    initPolygonCreation: initPolygonCreation
+  };
+}();
+/* RULERS MODULE */
+
+
+var rulerModule = function () {
+  var prevVertice;
+
+  function initRulerCreation() {
+    console.log("Iniciar ruler");
+    container.addEventListener('click', newRulerPoint);
+    container.addEventListener('keypress', saveCreatedRuler);
+  }
+
+  function stopRulerCreation() {
+    container.removeEventListener('click', newRulerPoint);
+    container.removeEventListener('keypress', saveCreatedRuler);
+  }
+
+  function saveCreatedRuler(event) {
+    console.log("Perque no em detecta l'Escape? ", event);
+
+    if (event.key === "Enter") {
+      stopRulerCreation(); //saveRuler()
+    }
+
+    if (event.key === "Escape" || event.key === "c") stopRulerCreation();
+  }
+
+  function newRulerPoint(event) {
+    var _prevVertice;
+
+    var intersects = intersections(event.clientX, event.clientY);
+    var _ref2 = [intersects[0].point.x, intersects[0].point.y, intersects[0].point.z],
+        px = _ref2[0],
+        py = _ref2[1],
+        pz = _ref2[2];
+    var point = createPoint();
+    scene.add(point);
+    point.position.set(px, py, pz);
+    console.log("Intersection: ", intersects[0].point);
+    var distanceFromPrev = (_prevVertice = prevVertice) === null || _prevVertice === void 0 ? void 0 : _prevVertice.distanceTo(intersects[0].point);
+    console.log(distanceFromPrev);
+    prevVertice = intersects[0].point;
+    render();
+  }
+
+  return {
+    initRulerCreation: initRulerCreation
+  };
+}();
+
 init();
 
 function createCamera() {
@@ -53304,7 +53589,7 @@ function init() {
 
   createGui(); // Carga de los modelos, polígonos, y todo lo que pueda tener el proyecto mas adelante
 
-  loadProject(); // Renderizar la escena creada
+  loadProject();
 
   render();
   window.addEventListener('resize', onWindowResize, false);
@@ -53315,11 +53600,15 @@ function createGui() {
   var defaultOptions = GUI.createGroup('defaultOptions');
   var layersGroup = GUI.createGroup('layers', 'Layers', true, true);
   var polygonsGroup = GUI.createGroup('polygons', 'Polygons', true, true);
+  var rulersGroup = GUI.createGroup('rulers', 'Rulers', true, true);
   var addPolygonsButton = GUI.createButton('/public/styles/icons/plus_cross.svg', 'gui__button--rounded', modals.modalNewPolygon);
+  var addRulerButton = GUI.createButton('/public/styles/icons/plus_cross.svg', 'gui__button--rounded', rulerModule.initRulerCreation);
   GUI.add(layersGroup, mainGui);
   GUI.add(GUI.createSeparator('space'), mainGui);
   GUI.add(addPolygonsButton, polygonsGroup);
   GUI.add(polygonsGroup, mainGui);
+  GUI.add(rulersGroup, mainGui);
+  GUI.add(addRulerButton, rulersGroup);
   GUI.add(GUI.createSeparator('line'), mainGui);
   GUI.add(GUI.createBasic('enableAll', 'Enable all', enableAllLayers), defaultOptions);
   GUI.add(GUI.createBasic('disableAll', 'Disable all', disableAllLayers), defaultOptions);
@@ -53354,12 +53643,12 @@ function loadMeshes(meshes) {
 }
 
 function loadPolygons(polygons) {
-  var _iterator = _createForOfIteratorHelper(polygons),
-      _step;
+  var _iterator5 = _createForOfIteratorHelper(polygons),
+      _step5;
 
   try {
-    for (_iterator.s(); !(_step = _iterator.n()).done;) {
-      var polygon = _step.value;
+    for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
+      var polygon = _step5.value;
       addGUIPolygon(polygon);
       var geometry = generatePolygon(polygon.points);
       scene.add(geometry);
@@ -53369,9 +53658,9 @@ function loadPolygons(polygons) {
       };
     }
   } catch (err) {
-    _iterator.e(err);
+    _iterator5.e(err);
   } finally {
-    _iterator.f();
+    _iterator5.f();
   }
 
   console.log(scenePolygons);
@@ -53385,7 +53674,7 @@ function loadSingleMesh(id, data) {
 
   api_loader.setDRACOLoader(dracoLoader); // Carga elementos de aws que agarra de la base de datos
 
-  api_loader.load('/public/meshes/cube10x10.glb', //data.url,
+  api_loader.load( data.url, // cambiar localMeshRoute a true para ver meshes de local en vez de las que vienen de la ruta de aws 
   function (glb) {
     console.group('Loading layer');
     console.log("DB layer info: ", data);
@@ -53440,261 +53729,6 @@ function addGUIPolygon(polygon) {
 
   GUI.add(guiElement, '#polygons .gui__group__content');
 }
-/* Módulo de CONTROL de CREACIÓN/MODIFICACIÓN/BORRAción.. de los polígonos */
-
-
-var polygonModule = function () {
-  var prevVertice;
-  var newPolygonVertices = [];
-  var newPolygons = []; // Para poderlos borrar cuadno se cancela, hay que guardar la instancia en algun lado
-
-  var clickingPoints = []; // Para poderlos borrar cuando se cancela, hay que guardar la instancia en algun lado
-  // !! TODO ESTO Está aquí por comodidad, no sé si deberia pertenecer aquí
-
-  container.addEventListener('click', selectElement);
-
-  function selectElement(e) {
-    var intersects = intersections(e.clientX, e.clientY);
-
-    var _iterator2 = _createForOfIteratorHelper(intersects),
-        _step2;
-
-    try {
-      for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
-        var intersected = _step2.value;
-
-        if (intersected.object.sceneType === 'polygon') {
-          showPolygonInfo(e.offsetX, e.offsetY, intersected.object.uuid);
-          highlight3DObject(intersected.object);
-        }
-      }
-    } catch (err) {
-      _iterator2.e(err);
-    } finally {
-      _iterator2.f();
-    }
-  }
-
-  function closeAllFreemodals() {
-    var _iterator3 = _createForOfIteratorHelper(document.querySelectorAll('.freeModal')),
-        _step3;
-
-    try {
-      for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
-        var freeModal = _step3.value;
-        freeModal.remove();
-      }
-    } catch (err) {
-      _iterator3.e(err);
-    } finally {
-      _iterator3.f();
-    }
-  }
-
-  function showPolygonInfo(x, y) {
-    var id = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
-    closeAllFreemodals();
-    var freeModal = document.createElement('div');
-    freeModal.className = 'freeModal';
-    freeModal.style.top = "".concat(y - 50, "px");
-    freeModal.style.left = "".concat(x + 20, "px"); // !! poner en funcion - Traverse elementos de scenePolygons para ver cual tiene esta geometria y poder cargar su data
-
-    var polygonData;
-
-    for (var scenePolygonID in scenePolygons) {
-      if (scenePolygons[scenePolygonID].geometry.uuid === id) {
-        polygonData = scenePolygons[scenePolygonID].data;
-      }
-    } // !! Pensar bien un constructor de freeModals, o aprovechar modal
-
-
-    freeModal.innerHTML = "\n    <h3>".concat(polygonData.name, "</h3>\n    <p>...</p>\n    <br>\n    ");
-
-    if (polygonData.link) {
-      var link = document.createElement('a');
-      link.href = polygonData.link;
-      link.target = '_blank';
-      link.textContent = 'Link';
-      freeModal.appendChild(link);
-    }
-
-    document.querySelector('body').appendChild(freeModal);
-  } // !! el TODO ESTO es hasta aquí
-
-
-  function initPolygonCreation() {
-    container.addEventListener('click', newPolygonPoint);
-    container.addEventListener('keypress', saveCreatedPolygon);
-  }
-
-  function stopPolygonCreation() {
-    container.removeEventListener('click', newPolygonPoint);
-    container.removeEventListener('keypress', saveCreatedPolygon);
-  }
-
-  function newPolygonPoint(event) {
-    var _prevVertice;
-
-    var intersects = intersections(event.clientX, event.clientY);
-    var _ref = [intersects[0].point.x, intersects[0].point.y, intersects[0].point.z],
-        px = _ref[0],
-        py = _ref[1],
-        pz = _ref[2];
-    console.log("Intersection: ", intersects[0].point);
-    var distanceFromPrev = (_prevVertice = prevVertice) === null || _prevVertice === void 0 ? void 0 : _prevVertice.distanceTo(intersects[0].point);
-    console.log(distanceFromPrev);
-    prevVertice = intersects[0].point;
-    var point = createPoint();
-    clickingPoints.push(point);
-    scene.add(point);
-    point.position.set(px, py, pz);
-    newPolygonVertices.push({
-      x: px,
-      y: py,
-      z: pz
-    });
-
-    if (newPolygonVertices.length >= 3) {
-      var newPolygon = generatePolygon(newPolygonVertices);
-      newPolygons.push(newPolygon);
-      scene.add(newPolygon); // !! Ver como No ir poniendo los polígonos uno encima de otro..
-    }
-
-    render();
-  }
-
-  function saveCreatedPolygon(e) {
-    if (e.key === "Enter") {
-      stopPolygonCreation();
-      modals.modalSavePolygon();
-    }
-  }
-
-  function saveUpdatedPolygon(polygon) {
-    fetch('/api/polygon/update', {
-      method: 'POST',
-      body: JSON.stringify({
-        id: polygon._id,
-        name: document.querySelector('#newName').value,
-        link: document.querySelector('#newLink').value
-      }),
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    }).then(function (res) {
-      return res.json();
-    }).then(function (resp) {
-      console.log('Updated', resp); // !! Se coje tal cual. Molaria hacerlo con una funcion propia del GUI. Habria que pensar el gui como el modal, como un constructor con sus cosas propias
-
-      document.querySelector("#polygon_".concat(resp._id)).remove(); // !! No hay manera logica o facil de actualizar la capa existente ahora mismo. La solucion rapida es borrarla y meter una nueva
-      // El problema es que se pone al final siempre claro
-
-      addGUIPolygon(resp);
-    });
-  }
-
-  function deletePolygon(polygon) {
-    // !! Cuidado, se esta borrando el poligono pero no se está quitando de la lista de poligonos del proyecto
-    fetch('/api/polygon/delete', {
-      method: 'POST',
-      body: JSON.stringify({
-        id: polygon._id
-      }),
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    }).then(function (res) {
-      return res.json();
-    }).then(function (resp) {
-      console.log('Deleted', resp); // !! Se coje tal cual. Molaria hacerlo con una funcion propia del GUI. Habria que pensar el gui como el modal, como un constructor con sus cosas propias
-
-      document.querySelector("#polygon_".concat(resp._id)).remove(); // !! Hay que quitarlo tambien del objeto scenePolygons
-
-      scene.remove(scenePolygons[resp._id].geometry);
-      render();
-    });
-  }
-
-  function savePolygonInfo() {
-    fetch('/api/polygon/save', {
-      method: 'POST',
-      body: JSON.stringify({
-        project: pathProjectId,
-        points: newPolygonVertices,
-        name: document.querySelector('#polygonName').value,
-        link: document.querySelector('#polygonLink').value,
-        color: 'green'
-      }),
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    }).then(function (res) {
-      return res.json();
-    }).then(function (resp) {
-      loadPolygons([resp]);
-    }).catch(function (error) {
-      return console.error(error);
-    });
-  }
-
-  function cleanPolygonCreated() {
-    var _iterator4 = _createForOfIteratorHelper(newPolygons),
-        _step4;
-
-    try {
-      for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
-        var polygon = _step4.value;
-        scene.remove(polygon);
-      }
-    } catch (err) {
-      _iterator4.e(err);
-    } finally {
-      _iterator4.f();
-    }
-
-    var _iterator5 = _createForOfIteratorHelper(clickingPoints),
-        _step5;
-
-    try {
-      for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
-        var point = _step5.value;
-        scene.remove(point);
-      }
-    } catch (err) {
-      _iterator5.e(err);
-    } finally {
-      _iterator5.f();
-    }
-
-    newPolygons = [];
-    newPolygonVertices = [];
-    clickingPoints = [];
-  }
-
-  var intersections = function intersections(x, y) {
-    mouse.x = x / renderer.domElement.clientWidth * 2 - 1;
-    mouse.y = -(y / renderer.domElement.clientHeight) * 2 + 1;
-    raycaster.setFromCamera(mouse, camera);
-    return raycaster.intersectObjects(scene.children, true);
-  };
-
-  function createPoint() {
-    var ico = new IcosahedronGeometry(0.3);
-    var material = new MeshBasicMaterial({
-      color: 0xd9d9d9
-    });
-    var point = new Mesh(ico, material);
-    return point;
-  }
-
-  return {
-    cleanPolygonCreated: cleanPolygonCreated,
-    savePolygonInfo: savePolygonInfo,
-    deletePolygon: deletePolygon,
-    saveUpdatedPolygon: saveUpdatedPolygon,
-    initPolygonCreation: initPolygonCreation
-  };
-}();
 /* HELPERS GENERALES */
 
 /* Genera un polígono three a partir de un array de objetos de vertices -> [{x:,y:,z:},] 
@@ -53753,3 +53787,19 @@ function highlight3DObject(object) {
   outlinePass.selectedObjects = [object];
   render();
 }
+
+var intersections = function intersections(x, y) {
+  mouse.x = x / renderer.domElement.clientWidth * 2 - 1;
+  mouse.y = -(y / renderer.domElement.clientHeight) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+  return raycaster.intersectObjects(scene.children, true);
+};
+
+var createPoint = function createPoint() {
+  var ico = new IcosahedronGeometry(0.3);
+  var material = new MeshBasicMaterial({
+    color: 0xd9d9d9
+  });
+  var point = new Mesh(ico, material);
+  return point;
+};
