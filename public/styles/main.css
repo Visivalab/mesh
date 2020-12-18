@@ -8,7 +8,9 @@ html,body{
 p,h1,h2,h3,h4,h5{
   margin: 0;
 }
-
+li{
+  list-style: none;
+}
 :root{
   --steam: #bfc1c4;
   --gray: #dbdbdb4d;
@@ -92,8 +94,12 @@ button:focus{
   border-radius: 20px;
   padding: 25px 20px;
   display: flex;
+  box-shadow: 0px 0px 10px 0px rgba(0,0,0,0.1);
   flex-direction: column;
 }
 .toolViewer button{
   margin-left: auto;
+}
+.toolViewer li{
+  margin: 5px 0;
 }

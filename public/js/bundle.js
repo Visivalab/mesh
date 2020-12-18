@@ -53488,7 +53488,7 @@ var rulerModule = function () {
       id: 'toolViewer_ruler'
     });
     toolViewer_ruler.mount();
-    toolViewer_ruler.addHTML("\n      <p>Total: <strong><span class=\"rulerTotalResult\">0</span>m</strong></p>\n      <p>Last: <strong><span class=\"rulerLastResult\">0</span>m</strong></p>\n    ");
+    toolViewer_ruler.addHTML("\n      <li>Total: <strong><span class=\"rulerTotalResult\">0</span>m</strong></li>\n      <li>Last: <strong><span class=\"rulerLastResult\">0</span>m</strong></li>\n    ");
     /*toolViewer_ruler.addButton({
       text: 'Save',
       action: () => {
@@ -53765,7 +53765,7 @@ function loadSingleMesh(id, data) {
 
   api_loader.setDRACOLoader(dracoLoader); // Carga elementos de aws que agarra de la base de datos
 
-  api_loader.load( '/public/meshes/cube10x10.glb' , // cambiar localMeshRoute a true para ver meshes de local en vez de las que vienen de la ruta de aws 
+  api_loader.load( data.url, // cambiar localMeshRoute a true para ver meshes de local en vez de las que vienen de la ruta de aws 
   function (glb) {
     console.group('Loading layer');
     console.log("DB layer info: ", data);

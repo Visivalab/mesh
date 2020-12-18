@@ -29,7 +29,8 @@ let scenePolygons = {}
 // Variable global para guardar el id del proyecto, que viene en la url
 let pathProjectId = window.location.pathname.split('/').pop()
 
-let localMeshRoute = true // cambiar localMeshRoute a true para ver meshes de local en vez de las que vienen de la ruta de aws 
+let localMeshRoute = false // cambiar localMeshRoute a true para ver meshes de local en vez de las que vienen de la ruta de aws 
+
 
 // Objeto que define la creación de cada modal, para poder encontrarla y editarla facilmente
 // No estoy muy seguro de la utilidad o practicidad real de esto
@@ -319,8 +320,8 @@ const rulerModule = (function(){
     })
     toolViewer_ruler.mount()
     toolViewer_ruler.addHTML(`
-      <p>Total: <strong><span class="rulerTotalResult">0</span>m</strong></p>
-      <p>Last: <strong><span class="rulerLastResult">0</span>m</strong></p>
+      <li>Total: <strong><span class="rulerTotalResult">0</span>m</strong></li>
+      <li>Last: <strong><span class="rulerLastResult">0</span>m</strong></li>
     `)
     
     /*toolViewer_ruler.addButton({
