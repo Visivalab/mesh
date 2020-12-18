@@ -46058,6 +46058,7 @@ ToolViewer.prototype.addHTML = function (html) {
 ToolViewer.prototype.addButton = function (options) {
   var button = document.createElement('button');
   button.textContent = options.text;
+  if (options.color) button.className = "button--".concat(options.color);
   button.addEventListener('click', options.action);
   document.querySelector("#".concat(this.id)).appendChild(button);
 };
@@ -53487,16 +53488,18 @@ var rulerModule = function () {
       id: 'toolViewer_ruler'
     });
     toolViewer_ruler.mount();
-    toolViewer_ruler.addHTML("\n      <p>Total: <span class=\"rulerTotalResult\">0</span>m</p>\n      <p>Last: <span class=\"rulerLastResult\">0</span>m</p>\n    ");
-    toolViewer_ruler.addButton({
+    toolViewer_ruler.addHTML("\n      <p>Total: <strong><span class=\"rulerTotalResult\">0</span>m</strong></p>\n      <p>Last: <strong><span class=\"rulerLastResult\">0</span>m</strong></p>\n    ");
+    /*toolViewer_ruler.addButton({
       text: 'Save',
-      action: function action() {
-        stopRulerCreation();
-        console.log("SAVEEEEEEE");
+      action: () => {
+        stopRulerCreation()
+        console.log("SAVEEEEEEE")
       }
-    });
+    })*/
+
     toolViewer_ruler.addButton({
-      text: 'Cancel',
+      text: 'Cancel (C)',
+      color: 'red',
       action: function action() {
         stopRulerCreation();
         console.log("CANCEL RULER");

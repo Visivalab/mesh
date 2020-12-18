@@ -27,6 +27,7 @@ ToolViewer.prototype.addHTML = function(html){
 ToolViewer.prototype.addButton = function(options){
   let button = document.createElement('button')
   button.textContent = options.text
+  if(options.color) button.className = `button--${options.color}`
   button.addEventListener( 'click', options.action )
 
   document.querySelector(`#${this.id}`).appendChild(button)

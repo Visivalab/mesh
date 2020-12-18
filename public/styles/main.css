@@ -84,11 +84,16 @@ button:focus{
 
 /* Tool viewer */
 .toolViewer{
-  min-width: 100px;
+  min-width: 200px;
   position: absolute;
   bottom: 20px;
   left: 20px;
   background-color: white;
   border-radius: 20px;
-  padding: 15px;
+  padding: 25px 20px;
+  display: flex;
+  flex-direction: column;
+}
+.toolViewer button{
+  margin-left: auto;
 }

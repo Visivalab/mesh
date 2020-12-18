@@ -319,19 +319,20 @@ const rulerModule = (function(){
     })
     toolViewer_ruler.mount()
     toolViewer_ruler.addHTML(`
-      <p>Total: <span class="rulerTotalResult">0</span>m</p>
-      <p>Last: <span class="rulerLastResult">0</span>m</p>
+      <p>Total: <strong><span class="rulerTotalResult">0</span>m</strong></p>
+      <p>Last: <strong><span class="rulerLastResult">0</span>m</strong></p>
     `)
-
-    toolViewer_ruler.addButton({
+    
+    /*toolViewer_ruler.addButton({
       text: 'Save',
       action: () => {
         stopRulerCreation()
         console.log("SAVEEEEEEE")
       }
-    })
+    })*/
     toolViewer_ruler.addButton({
-      text: 'Cancel',
+      text: 'Cancel (C)',
+      color: 'red',
       action: () => {
         stopRulerCreation()
         console.log("CANCEL RULER")
