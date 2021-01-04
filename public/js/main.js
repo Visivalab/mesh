@@ -120,7 +120,6 @@ const polygonModule = (function(){
   let clickingPoints = [] // Para poderlos borrar cuando se cancela hay que guardar la instancia en algun lado
   
   
-  
   // !! TODO ESTO Está aquí por comodidad, no sé si deberia pertenecer aquí
   function initPolygonSelection(){
     container.addEventListener('click',selectElement)
@@ -308,6 +307,7 @@ const rulerModule = (function(){
   let prevVertice
   let rulerDistances = []
   let clickingPoints = []
+  let rawPoints = []
 
   let toolViewer_ruler
 
@@ -346,6 +346,7 @@ const rulerModule = (function(){
 
   function stopRulerCreation(){
     for(let point of clickingPoints) scene.remove(point)
+    rawPoints = []
     clickingPoints = []
     rulerDistances = []
     prevVertice = undefined
@@ -360,8 +361,8 @@ const rulerModule = (function(){
   function saveCreatedRuler(event){
     console.log("Perque no em detecta l'Escape? ", event)
     if(event.key === "Enter"){
+      saveRuler()
       stopRulerCreation()
-      //saveRuler()
     }
     if(event.key === "Escape" || event.key === "c") stopRulerCreation()
   }
@@ -370,6 +371,7 @@ const rulerModule = (function(){
 
     const intersects = intersections(event.clientX, event.clientY)
     let [px,py,pz] = [intersects[0].point.x, intersects[0].point.y, intersects[0].point.z]
+    rawPoints.push([px,py,pz])
 
     let point = createPoint()
     clickingPoints.push(point)
@@ -389,6 +391,30 @@ const rulerModule = (function(){
     }
 
     render()
+  }
+
+  function saveRuler(){
+    console.log("Points to save: ", rawPoints )
+    fetch('/api/ruler/save',{
+      method:'POST',
+      body: JSON.stringify({
+        idProject: pathProjectId,
+        name: 'Ruler',
+        points: rawPoints,
+      }),
+      headers:{
+        'Content-Type': 'application/json'
+      }
+    })
+    .then( res => res.json() )
+    .then( resp => {
+      console.log('Ruler created', resp)
+      
+      //document.querySelector(`#polygon_${resp._id}`).remove()
+      
+      //addGUIPolygon(resp)
+    })
+
   }
 
   return{

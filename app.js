@@ -35,6 +35,7 @@ app.use('/bulma', express.static('node_modules/bulma'))
 const meshController = require('./controllers/meshController')
 const projectController = require('./controllers/projectController')
 const polygonController = require('./controllers/polygonController')
+const rulerController = require('./controllers/rulerController')
 
 let jsonParser = bodyParser.json()
 //let urlencodedParser = bodyParser.urlencoded({ extended: false })
@@ -48,10 +49,14 @@ app.get('/admin', (req, res) => {
 //app.post('/api/upload', meshController.upload)
 app.get('/api/projects', projectController.allProjects)
 app.get('/api/project/:id', projectController.project)
+
 //app.get('/api/mesh', meshController.getMesh)
 app.post('/api/polygon/save', jsonParser, polygonController.savePolygon)
 app.post('/api/polygon/update', jsonParser, polygonController.updatePolygon)
 app.post('/api/polygon/delete', jsonParser, polygonController.deletePolygon)
+
+app.post('/api/ruler/save', jsonParser, rulerController.saveRuler)
+app.post('/api/ruler/delete', jsonParser, rulerController.deleteRuler)
 
 //app.get('/api/polygon/:id', polygonController.getPolygon) // Coje un poligono concreto mediante su id
 app.listen(port, () => {

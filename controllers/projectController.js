@@ -19,7 +19,7 @@ exports.project = function(req,res){
   .populate('meshes')
   .populate('polygons')
   .exec(function(err,finded){
-    if(err) console.log(err)
+    if(err) return console.log(err)
     //console.log(finded)
     res.json(finded)
   })

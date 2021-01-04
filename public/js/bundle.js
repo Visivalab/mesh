@@ -53479,6 +53479,7 @@ var rulerModule = function () {
   var prevVertice;
   var rulerDistances = [];
   var clickingPoints = [];
+  var rawPoints = [];
   var toolViewer_ruler;
 
   function initRulerCreation() {
@@ -53524,6 +53525,7 @@ var rulerModule = function () {
       _iterator5.f();
     }
 
+    rawPoints = [];
     clickingPoints = [];
     rulerDistances = [];
     prevVertice = undefined;
@@ -53537,7 +53539,8 @@ var rulerModule = function () {
     console.log("Perque no em detecta l'Escape? ", event);
 
     if (event.key === "Enter") {
-      stopRulerCreation(); //saveRuler()
+      saveRuler();
+      stopRulerCreation();
     }
 
     if (event.key === "Escape" || event.key === "c") stopRulerCreation();
@@ -53551,6 +53554,7 @@ var rulerModule = function () {
         px = _ref2[0],
         py = _ref2[1],
         pz = _ref2[2];
+    rawPoints.push([px, py, pz]);
     var point = createPoint();
     clickingPoints.push(point);
     scene.add(point);
@@ -53569,6 +53573,26 @@ var rulerModule = function () {
     }
 
     render();
+  }
+
+  function saveRuler() {
+    console.log("Points to save: ", rawPoints);
+    fetch('/api/ruler/save', {
+      method: 'POST',
+      body: JSON.stringify({
+        idProject: pathProjectId,
+        name: 'Ruler',
+        points: rawPoints
+      }),
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }).then(function (res) {
+      return res.json();
+    }).then(function (resp) {
+      console.log('Ruler created', resp); //document.querySelector(`#polygon_${resp._id}`).remove()
+      //addGUIPolygon(resp)
+    });
   }
 
   return {
