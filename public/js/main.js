@@ -70,6 +70,24 @@ const modals = {
       editPolyModal.close()
     })
   },
+  'editRulerModal': function(ruler){
+    let editRulerModal = new Modal({
+      background: true,
+      id: 'editRulerModal'
+    })
+    editRulerModal.mount()
+    editRulerModal.addInput({ type:'text',id:'newName',name:'newName',value:ruler.name})
+    editRulerModal.addButton({ text:'Save changes',color:'green',key:'Enter'}, () => {
+      rulerModule.saveUpdatedRuler(ruler)
+      editRulerModal.close()
+    })
+    editRulerModal.addButton({ text:'Delete',color:'red' }, () => {
+      modals.modalConfirmDeleteRuler(ruler)
+    })
+    editRulerModal.addButton({ text:'Cancel' }, () => {
+      editRulerModal.close()
+    })
+  },
   'modalConfirmDeletePolygon': function(polygon){
     let confirmDelete = new Modal({
       id: 'confirmDelete'
@@ -81,6 +99,24 @@ const modals = {
       confirmDelete.close()
       // !! Esto está así porqué no está referenciada la otra modal en ningun lado que pueda ir desde aquí
       document.querySelector('#editPolyModal').remove()
+      document.querySelector('.modal__background').remove()
+      
+    })
+    confirmDelete.addButton({ text:'No',color:'green',key:'Escape' }, () => {
+      confirmDelete.close()
+    })
+  },
+  'modalConfirmDeleteRuler': function(ruler){
+    let confirmDelete = new Modal({
+      id: 'confirmDelete'
+    })
+    confirmDelete.mount()
+    confirmDelete.write('Sure?')
+    confirmDelete.addButton({ text:'Yes',color:'red',key:'Enter' }, () => {
+      rulerModule.deleteRuler(ruler)
+      confirmDelete.close()
+      // !! Esto está así porqué no está referenciada la otra modal en ningun lado que pueda ir desde aquí
+      document.querySelector('#editRulerModal').remove()
       document.querySelector('.modal__background').remove()
       
     })
@@ -230,7 +266,7 @@ const polygonModule = (function(){
     })
     .then( res => res.json() )
     .then( resp => {
-      console.log('Updated', resp)
+      console.log('Updated polygon', resp)
       
       // !! Se coje tal cual. Molaria hacerlo con una funcion propia del GUI. Habria que pensar el gui como el modal, como un constructor con sus cosas propias
       document.querySelector(`#polygon_${resp._id}`).remove()
@@ -245,12 +281,15 @@ const polygonModule = (function(){
     // !! Cuidado, se esta borrando el poligono pero no se está quitando de la lista de poligonos del proyecto
     fetch('/api/polygon/delete',{
       method:'POST',
-      body: JSON.stringify({ id: polygon._id }),
+      body: JSON.stringify({ 
+        idProject: pathProjectId,
+        id: polygon._id 
+      }),
       headers:{ 'Content-Type': 'application/json' }
     })
     .then( res => res.json() )
     .then( resp => {
-      console.log('Deleted', resp)
+      console.log('Deleted polygon', resp)
       
       // !! Se coje tal cual. Molaria hacerlo con una funcion propia del GUI. Habria que pensar el gui como el modal, como un constructor con sus cosas propias
       document.querySelector(`#polygon_${resp._id}`).remove()
@@ -410,15 +449,61 @@ const rulerModule = (function(){
     .then( resp => {
       console.log('Ruler created', resp)
       
-      //document.querySelector(`#polygon_${resp._id}`).remove()
-      
-      //addGUIPolygon(resp)
+      addGUIRuler(resp)
     })
 
   }
 
+  function saveUpdatedRuler(ruler){
+    fetch('/api/ruler/update',{
+      method:'POST',
+      body: JSON.stringify({
+        id: ruler._id,
+        name: document.querySelector('#newName').value
+      }),
+      headers:{
+        'Content-Type': 'application/json'
+      }
+    })
+    .then( res => res.json() )
+    .then( resp => {
+      console.log('Updated ruler', resp)
+      
+      // !! Se coje tal cual. Molaria hacerlo con una funcion propia del GUI. Habria que pensar el gui como el modal, como un constructor con sus cosas propias
+      document.querySelector(`#ruler_${resp._id}`).remove()
+      // !! No hay manera logica o facil de actualizar la capa existente ahora mismo. La solucion rapida es borrarla y meter una nueva
+      // El problema es que se pone al final siempre claro
+      addGUIRuler(resp)
+    })
+  }
+
+  function deleteRuler(ruler){
+    // !! Cuidado, se esta borrando el ruler pero no se está quitando de la lista de rulers del proyecto
+    fetch('/api/ruler/delete',{
+      method:'POST',
+      body: JSON.stringify({
+        idProject: pathProjectId, 
+        id: ruler._id 
+      }),
+      headers:{ 'Content-Type': 'application/json' }
+    })
+    .then( res => res.json() )
+    .then( resp => {
+      console.log('Deleted ruler', resp)
+      
+      // !! Se coje tal cual. Molaria hacerlo con una funcion propia del GUI. Habria que pensar el gui como el modal, como un constructor con sus cosas propias
+      document.querySelector(`#ruler_${resp._id}`).remove()
+
+      // !! Hay que quitarlo tambien del objeto scenePolygons
+      //scene.remove(scenePolygons[resp._id].geometry)
+      render()
+    })
+  }
+
   return{
-    initRulerCreation
+    initRulerCreation,
+    saveUpdatedRuler,
+    deleteRuler
   }
 })()
 
@@ -592,6 +677,7 @@ function loadProject(){
 
     loadMeshes(project.meshes)
     loadPolygons(project.polygons)
+    loadRulers(project.rulers)
   })
 }
 
@@ -620,6 +706,14 @@ function loadPolygons(polygons){
     }
   }
   console.log(scenePolygons)
+}
+
+function loadRulers(rulers){
+  for(let ruler of rulers){
+    addGUIRuler(ruler)
+
+    //Cargar tambien en la escena
+  }
 }
 
 function loadSingleMesh(id,data){
@@ -687,8 +781,26 @@ function addGUIPolygon(polygon){
     // No usar capas para esto, solo hay 32 layers como tal en three. Remover y añadir los poligonos tal qual
     console.log("Apagar este polygon")
   }, guiElement_options )
-  // Añadimos el polígono generado a la escena
+  
   GUI.add(guiElement,'#polygons .gui__group__content')
+}
+
+function addGUIRuler(ruler){
+  let guiElement_options = {
+    edit:{
+      'name':'Edit',
+      'image': '/styles/icons/menu_3puntosVertical.svg',
+      'event': function(){
+        console.log("Open element menu")
+        modals.editRulerModal(ruler)
+      }
+    }
+  }
+  let guiElement = GUI.createBasic(`ruler_${ruler._id}`, ruler.name, function(){
+    console.log("Apagar este ruler")
+  }, guiElement_options)
+  
+  GUI.add(guiElement, '#rulers .gui__group__content')
 }
 
 

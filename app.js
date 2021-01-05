@@ -56,6 +56,7 @@ app.post('/api/polygon/update', jsonParser, polygonController.updatePolygon)
 app.post('/api/polygon/delete', jsonParser, polygonController.deletePolygon)
 
 app.post('/api/ruler/save', jsonParser, rulerController.saveRuler)
+app.post('/api/ruler/update', jsonParser, rulerController.updateRuler)
 app.post('/api/ruler/delete', jsonParser, rulerController.deleteRuler)
 
 //app.get('/api/polygon/:id', polygonController.getPolygon) // Coje un poligono concreto mediante su id

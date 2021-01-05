@@ -53171,6 +53171,38 @@ var modals = {
       editPolyModal.close();
     });
   },
+  'editRulerModal': function editRulerModal(ruler) {
+    var editRulerModal = new Modal({
+      background: true,
+      id: 'editRulerModal'
+    });
+    editRulerModal.mount();
+    editRulerModal.addInput({
+      type: 'text',
+      id: 'newName',
+      name: 'newName',
+      value: ruler.name
+    });
+    editRulerModal.addButton({
+      text: 'Save changes',
+      color: 'green',
+      key: 'Enter'
+    }, function () {
+      rulerModule.saveUpdatedRuler(ruler);
+      editRulerModal.close();
+    });
+    editRulerModal.addButton({
+      text: 'Delete',
+      color: 'red'
+    }, function () {
+      modals.modalConfirmDeleteRuler(ruler);
+    });
+    editRulerModal.addButton({
+      text: 'Cancel'
+    }, function () {
+      editRulerModal.close();
+    });
+  },
   'modalConfirmDeletePolygon': function modalConfirmDeletePolygon(polygon) {
     var confirmDelete = new Modal({
       id: 'confirmDelete'
@@ -53186,6 +53218,31 @@ var modals = {
       confirmDelete.close(); // !! Esto está así porqué no está referenciada la otra modal en ningun lado que pueda ir desde aquí
 
       document.querySelector('#editPolyModal').remove();
+      document.querySelector('.modal__background').remove();
+    });
+    confirmDelete.addButton({
+      text: 'No',
+      color: 'green',
+      key: 'Escape'
+    }, function () {
+      confirmDelete.close();
+    });
+  },
+  'modalConfirmDeleteRuler': function modalConfirmDeleteRuler(ruler) {
+    var confirmDelete = new Modal({
+      id: 'confirmDelete'
+    });
+    confirmDelete.mount();
+    confirmDelete.write('Sure?');
+    confirmDelete.addButton({
+      text: 'Yes',
+      color: 'red',
+      key: 'Enter'
+    }, function () {
+      rulerModule.deleteRuler(ruler);
+      confirmDelete.close(); // !! Esto está así porqué no está referenciada la otra modal en ningun lado que pueda ir desde aquí
+
+      document.querySelector('#editRulerModal').remove();
       document.querySelector('.modal__background').remove();
     });
     confirmDelete.addButton({
@@ -53376,7 +53433,7 @@ var polygonModule = function () {
     }).then(function (res) {
       return res.json();
     }).then(function (resp) {
-      console.log('Updated', resp); // !! Se coje tal cual. Molaria hacerlo con una funcion propia del GUI. Habria que pensar el gui como el modal, como un constructor con sus cosas propias
+      console.log('Updated polygon', resp); // !! Se coje tal cual. Molaria hacerlo con una funcion propia del GUI. Habria que pensar el gui como el modal, como un constructor con sus cosas propias
 
       document.querySelector("#polygon_".concat(resp._id)).remove(); // !! No hay manera logica o facil de actualizar la capa existente ahora mismo. La solucion rapida es borrarla y meter una nueva
       // El problema es que se pone al final siempre claro
@@ -53390,6 +53447,7 @@ var polygonModule = function () {
     fetch('/api/polygon/delete', {
       method: 'POST',
       body: JSON.stringify({
+        idProject: pathProjectId,
         id: polygon._id
       }),
       headers: {
@@ -53398,7 +53456,7 @@ var polygonModule = function () {
     }).then(function (res) {
       return res.json();
     }).then(function (resp) {
-      console.log('Deleted', resp); // !! Se coje tal cual. Molaria hacerlo con una funcion propia del GUI. Habria que pensar el gui como el modal, como un constructor con sus cosas propias
+      console.log('Deleted polygon', resp); // !! Se coje tal cual. Molaria hacerlo con una funcion propia del GUI. Habria que pensar el gui como el modal, como un constructor con sus cosas propias
 
       document.querySelector("#polygon_".concat(resp._id)).remove(); // !! Hay que quitarlo tambien del objeto scenePolygons
 
@@ -53590,13 +53648,60 @@ var rulerModule = function () {
     }).then(function (res) {
       return res.json();
     }).then(function (resp) {
-      console.log('Ruler created', resp); //document.querySelector(`#polygon_${resp._id}`).remove()
-      //addGUIPolygon(resp)
+      console.log('Ruler created', resp);
+      addGUIRuler(resp);
+    });
+  }
+
+  function saveUpdatedRuler(ruler) {
+    fetch('/api/ruler/update', {
+      method: 'POST',
+      body: JSON.stringify({
+        id: ruler._id,
+        name: document.querySelector('#newName').value
+      }),
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }).then(function (res) {
+      return res.json();
+    }).then(function (resp) {
+      console.log('Updated ruler', resp); // !! Se coje tal cual. Molaria hacerlo con una funcion propia del GUI. Habria que pensar el gui como el modal, como un constructor con sus cosas propias
+
+      document.querySelector("#ruler_".concat(resp._id)).remove(); // !! No hay manera logica o facil de actualizar la capa existente ahora mismo. La solucion rapida es borrarla y meter una nueva
+      // El problema es que se pone al final siempre claro
+
+      addGUIRuler(resp);
+    });
+  }
+
+  function deleteRuler(ruler) {
+    // !! Cuidado, se esta borrando el ruler pero no se está quitando de la lista de rulers del proyecto
+    fetch('/api/ruler/delete', {
+      method: 'POST',
+      body: JSON.stringify({
+        idProject: pathProjectId,
+        id: ruler._id
+      }),
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }).then(function (res) {
+      return res.json();
+    }).then(function (resp) {
+      console.log('Deleted ruler', resp); // !! Se coje tal cual. Molaria hacerlo con una funcion propia del GUI. Habria que pensar el gui como el modal, como un constructor con sus cosas propias
+
+      document.querySelector("#ruler_".concat(resp._id)).remove(); // !! Hay que quitarlo tambien del objeto scenePolygons
+      //scene.remove(scenePolygons[resp._id].geometry)
+
+      render();
     });
   }
 
   return {
-    initRulerCreation: initRulerCreation
+    initRulerCreation: initRulerCreation,
+    saveUpdatedRuler: saveUpdatedRuler,
+    deleteRuler: deleteRuler
   };
 }();
 
@@ -53738,6 +53843,7 @@ function loadProject() {
     console.log("Project: ".concat(project._id), project);
     loadMeshes(project.meshes);
     loadPolygons(project.polygons);
+    loadRulers(project.rulers);
   });
 }
 
@@ -53779,6 +53885,22 @@ function loadPolygons(polygons) {
   }
 
   console.log(scenePolygons);
+}
+
+function loadRulers(rulers) {
+  var _iterator7 = _createForOfIteratorHelper(rulers),
+      _step7;
+
+  try {
+    for (_iterator7.s(); !(_step7 = _iterator7.n()).done;) {
+      var ruler = _step7.value;
+      addGUIRuler(ruler); //Cargar tambien en la escena
+    }
+  } catch (err) {
+    _iterator7.e(err);
+  } finally {
+    _iterator7.f();
+  }
 }
 
 function loadSingleMesh(id, data) {
@@ -53840,9 +53962,25 @@ function addGUIPolygon(polygon) {
   var guiElement = GUI.createBasic("polygon_".concat(polygon._id), polygon.name, function () {
     // No usar capas para esto, solo hay 32 layers como tal en three. Remover y añadir los poligonos tal qual
     console.log("Apagar este polygon");
-  }, guiElement_options); // Añadimos el polígono generado a la escena
-
+  }, guiElement_options);
   GUI.add(guiElement, '#polygons .gui__group__content');
+}
+
+function addGUIRuler(ruler) {
+  var guiElement_options = {
+    edit: {
+      'name': 'Edit',
+      'image': '/styles/icons/menu_3puntosVertical.svg',
+      'event': function event() {
+        console.log("Open element menu");
+        modals.editRulerModal(ruler);
+      }
+    }
+  };
+  var guiElement = GUI.createBasic("ruler_".concat(ruler._id), ruler.name, function () {
+    console.log("Apagar este ruler");
+  }, guiElement_options);
+  GUI.add(guiElement, '#rulers .gui__group__content');
 }
 /* HELPERS GENERALES */
 
@@ -53857,19 +53995,19 @@ function generatePolygon(vertices) {
   var earcutVertices = [];
   var geometryVertices = [];
 
-  var _iterator7 = _createForOfIteratorHelper(vertices),
-      _step7;
+  var _iterator8 = _createForOfIteratorHelper(vertices),
+      _step8;
 
   try {
-    for (_iterator7.s(); !(_step7 = _iterator7.n()).done;) {
-      var vertice = _step7.value;
+    for (_iterator8.s(); !(_step8 = _iterator8.n()).done;) {
+      var vertice = _step8.value;
       geometryVertices.push(new Vector3(vertice.x, vertice.y, vertice.z));
       earcutVertices = earcutVertices.concat([vertice.x, vertice.y, vertice.z]);
     }
   } catch (err) {
-    _iterator7.e(err);
+    _iterator8.e(err);
   } finally {
-    _iterator7.f();
+    _iterator8.f();
   }
 
   var triangleVertexs = earcut_1(earcutVertices, null, 3); // earcut retorna un array con los indices de los vertices de cada triangulo - [1,0,3, 3,2,1] -

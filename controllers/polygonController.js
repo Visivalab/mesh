@@ -30,6 +30,19 @@ exports.updatePolygon = async function(req,res){
 }
 
 exports.deletePolygon = async function(req,res){
-  let deletePolygon = await Polygon.findByIdAndDelete(req.body.id)
+  // Borra el poligono Y LO QUITA DEL PROYECTO
+  let idProject = req.body.idProject
+  let idPolygon = req.body.id
+
+  let deletePolygon = await Polygon.findByIdAndDelete(idPolygon)
+
+  let project = await Project.findById(idProject)
+  
+  let index = project.polygons.indexOf(idPolygon)
+  if(index > -1) project.polygons.splice(index, 1)
+
+  project.save()
+  
+  console.log("Polygon deleted")
   res.send(deletePolygon)
 }

@@ -5,6 +5,7 @@ exports.allProjects = function(req,res){
   .find({})
   .populate('meshes')
   .populate('polygons')
+  .populate('rulers')
   .exec(function(err,finded){
     if(err) console.log(err)
     //console.log(finded)
@@ -18,6 +19,7 @@ exports.project = function(req,res){
   .findById(id)
   .populate('meshes')
   .populate('polygons')
+  .populate('rulers')
   .exec(function(err,finded){
     if(err) return console.log(err)
     //console.log(finded)
