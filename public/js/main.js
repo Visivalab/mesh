@@ -15,7 +15,7 @@ import { GammaCorrectionShader } from 'three/examples/jsm/shaders/GammaCorrectio
 import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
 
 // Variables globales de threejs
-let renderer, scene, camera, controls, ambientLight
+let renderer, scene, overscene, camera, controls, ambientLight
 const raycaster = new THREE.Raycaster()
 const mouse = new THREE.Vector2()
 
@@ -416,9 +416,14 @@ const rulerModule = (function(){
     let point = createPoint()
     clickingPoints.push(point)
     scene.add(point)
+    overscene.add(point)
+
     point.position.set(px, py, pz)
 
-    if(prevVertice) scene.add( generateLine([intersects[0].point, prevVertice]) )
+    if(prevVertice){
+      scene.add( generateLine([intersects[0].point, prevVertice]) )
+      overscene.add( generateLine([intersects[0].point, prevVertice]) )
+    } 
 
     let distanceFromPrev = prevVertice?.distanceTo(intersects[0].point)
     prevVertice = intersects[0].point
@@ -563,6 +568,7 @@ function createRenderer(){
   //renderer.gammaOutput = true;
   //renderer.gammaFactor = 2.2;
   renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.autoClear = false;
 
   container.appendChild( renderer.domElement );
 
@@ -613,7 +619,12 @@ function onWindowResize() {
 
 function render() {
   //renderer.render( scene, camera );
+  renderer.clear();  
   composer.render(scene, camera)
+
+  //Intento de hacer otra scene por encima para hacer que las cosas que se esconden detras de objetos siempre esten visibles
+  renderer.clearDepth();
+  renderer.render( overscene, camera );
 }
 
 function init() {
@@ -623,6 +634,8 @@ function init() {
   //Crear la escena con su background bien bonito
   scene = new THREE.Scene();
   scene.background = new THREE.Color( 0xbfe3dd );
+  // Crear la escena de ayuda que irà encima de la scene. Esto es para tener objetos que se esconden detrás de objetos siempre visibles. En overscene se meterian estos objetos que queremos siempre visibles
+  overscene = new THREE.Scene();
 
   // Configuraciones de three
   createCamera();
@@ -636,7 +649,7 @@ function init() {
   
   // Carga de los modelos, polígonos, y todo lo que pueda tener el proyecto mas adelante
   loadProject();
-  polygonModule.initPolygonSelection;
+  polygonModule.initPolygonSelection();
   
   // Renderizar la escena creada
   render();
@@ -717,6 +730,8 @@ function loadRulers(rulers){
     
     let geometry = generateLine(ruler.points)
     scene.add(geometry)
+    overscene.add(geometry)
+    
     sceneRulers[ruler._id] = {
       data: ruler,
       geometry
@@ -859,7 +874,7 @@ function generateLine(vertices){
 
   for(let vertice of vertices) vector3_lineVertices.push(new THREE.Vector3( vertice.x, vertice.y, vertice.z ))
 
-  const lineMaterial = new THREE.LineBasicMaterial( { color: 0x0000ff } );
+  const lineMaterial = new THREE.LineBasicMaterial( { color: 0x0000ff, linewidth: 2 } );
   const lineGeometry = new THREE.BufferGeometry().setFromPoints( vector3_lineVertices );
   const createdLine = new THREE.Line( lineGeometry, lineMaterial );
 
@@ -867,7 +882,6 @@ function generateLine(vertices){
 }
 /* Resalta el elemento 3D en la escena de three */
 function highlight3DObject(object){
-  //console.log("Highlight ", object)
   outlinePass.selectedObjects = [object];
   render()
 }

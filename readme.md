@@ -17,10 +17,12 @@
   - [ ] Ver info(nombre,distancia) como parte de la misma linea, en el centro?
 - [x] Ruler no tiene linias uniendo los puntos. Debe tener claro.
 - [ ] Seria interesante ver como hacer un elemento 3d que se vea siempre por encima de los demás por mas que todo rote y se tape etc.
+- [ ] Info del elemento pulsado deberia seguir la rotación de la escena.
 
 #### Bugs ####
 - [ ] Si se rota mientras se hace un polígono o medida, se crea un nuevo punta al dejar de rotar porqué lo considera un click hecho
 - [x] Cuando se borra un documento de poligono o medida, borrar tambien su referencia en mongodb
+- [ ] Info del elemento pulsado no desaparece
 
 #### Tareas secundarias ####
 - [ ] Automatizar backups en mongodb estaria bien, por si acaso

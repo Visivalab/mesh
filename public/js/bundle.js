@@ -53093,7 +53093,7 @@ OutlinePass.prototype = Object.assign( Object.create( Pass.prototype ), {
 OutlinePass.BlurDirectionX = new Vector2( 1.0, 0.0 );
 OutlinePass.BlurDirectionY = new Vector2( 0.0, 1.0 );
 
-var renderer, scene, camera, controls, ambientLight;
+var renderer, scene, overscene, camera, controls, ambientLight;
 var raycaster = new Raycaster();
 var mouse = new Vector2(); // Variables globales para trabajar con shaders (el outline al pulsar un polígono)
 
@@ -53621,8 +53621,14 @@ var rulerModule = function () {
     var point = createPoint();
     clickingPoints.push(point);
     scene.add(point);
+    overscene.add(point);
     point.position.set(px, py, pz);
-    if (prevVertice) scene.add(generateLine([intersects[0].point, prevVertice]));
+
+    if (prevVertice) {
+      scene.add(generateLine([intersects[0].point, prevVertice]));
+      overscene.add(generateLine([intersects[0].point, prevVertice]));
+    }
+
     var distanceFromPrev = (_prevVertice = prevVertice) === null || _prevVertice === void 0 ? void 0 : _prevVertice.distanceTo(intersects[0].point);
     prevVertice = intersects[0].point;
     var totalResult = document.querySelector('.rulerTotalResult');
@@ -53756,6 +53762,7 @@ function createRenderer() {
   //renderer.gammaFactor = 2.2;
 
   renderer.outputEncoding = sRGBEncoding;
+  renderer.autoClear = false;
   container.appendChild(renderer.domElement);
 }
 
@@ -53798,14 +53805,20 @@ function onWindowResize() {
 
 function render() {
   //renderer.render( scene, camera );
-  composer.render(scene, camera);
+  renderer.clear();
+  composer.render(scene, camera); //Intento de hacer otra scene por encima para hacer que las cosas que se esconden detras de objetos siempre esten visibles
+
+  renderer.clearDepth();
+  renderer.render(overscene, camera);
 }
 
 function init() {
   container = document.querySelector('#viewer'); //Crear la escena con su background bien bonito
 
   scene = new Scene();
-  scene.background = new Color(0xbfe3dd); // Configuraciones de three
+  scene.background = new Color(0xbfe3dd); // Crear la escena de ayuda que irà encima de la scene. Esto es para tener objetos que se esconden detrás de objetos siempre visibles. En overscene se meterian estos objetos que queremos siempre visibles
+
+  overscene = new Scene(); // Configuraciones de three
 
   createCamera();
   createLights();
@@ -53816,6 +53829,7 @@ function init() {
   createGui(); // Carga de los modelos, polígonos, y todo lo que pueda tener el proyecto mas adelante
 
   loadProject();
+  polygonModule.initPolygonSelection(); // Renderizar la escena creada
 
   render();
   window.addEventListener('resize', onWindowResize, false);
@@ -53903,6 +53917,7 @@ function loadRulers(rulers) {
       addGUIRuler(ruler);
       var geometry = generateLine(ruler.points);
       scene.add(geometry);
+      overscene.add(geometry);
       sceneRulers[ruler._id] = {
         data: ruler,
         geometry: geometry
@@ -54068,7 +54083,8 @@ function generateLine(vertices) {
   }
 
   var lineMaterial = new LineBasicMaterial({
-    color: 0x0000ff
+    color: 0x0000ff,
+    linewidth: 2
   });
   var lineGeometry = new BufferGeometry().setFromPoints(vector3_lineVertices);
   var createdLine = new Line(lineGeometry, lineMaterial);
@@ -54078,7 +54094,6 @@ function generateLine(vertices) {
 
 
 function highlight3DObject(object) {
-  //console.log("Highlight ", object)
   outlinePass.selectedObjects = [object];
   render();
 }
