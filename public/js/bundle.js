@@ -53101,7 +53101,8 @@ var composer, outlinePass; // Variables globales para elementos de la interfaz q
 
 var container, mainGui; // Variables globales donde guardar un array con los objetos en escena, para poder verlos y modificarlos siempre
 
-var scenePolygons = {}; //let sceneMeshes = {}
+var scenePolygons = {};
+var sceneRulers = {}; //let sceneMeshes = {}
 // Variable global para guardar el id del proyecto, que viene en la url
 
 var pathProjectId = window.location.pathname.split('/').pop();
@@ -53612,11 +53613,16 @@ var rulerModule = function () {
         px = _ref2[0],
         py = _ref2[1],
         pz = _ref2[2];
-    rawPoints.push([px, py, pz]);
+    rawPoints.push({
+      x: px,
+      y: py,
+      z: pz
+    });
     var point = createPoint();
     clickingPoints.push(point);
     scene.add(point);
     point.position.set(px, py, pz);
+    if (prevVertice) scene.add(generateLine([intersects[0].point, prevVertice]));
     var distanceFromPrev = (_prevVertice = prevVertice) === null || _prevVertice === void 0 ? void 0 : _prevVertice.distanceTo(intersects[0].point);
     prevVertice = intersects[0].point;
     var totalResult = document.querySelector('.rulerTotalResult');
@@ -53894,13 +53900,21 @@ function loadRulers(rulers) {
   try {
     for (_iterator7.s(); !(_step7 = _iterator7.n()).done;) {
       var ruler = _step7.value;
-      addGUIRuler(ruler); //Cargar tambien en la escena
+      addGUIRuler(ruler);
+      var geometry = generateLine(ruler.points);
+      scene.add(geometry);
+      sceneRulers[ruler._id] = {
+        data: ruler,
+        geometry: geometry
+      };
     }
   } catch (err) {
     _iterator7.e(err);
   } finally {
     _iterator7.f();
   }
+
+  console.log(sceneRulers);
 }
 
 function loadSingleMesh(id, data) {
@@ -54031,6 +54045,34 @@ function generatePolygon(vertices) {
   createdPolygon.sceneType = 'polygon'; // Le añadimos esta propiedad para que quede constancia en algun lado de que es un poligono. Nos servirá para cuando se pulse con el ratón para seleccionarlo
 
   return createdPolygon;
+}
+/* Genera una linea a partir de un array de objetos {x:,y:,z:} o de vector3s 
+Se encarga de crear los vector3 necesarios para los vertices en caso de que no */
+
+
+function generateLine(vertices) {
+  var vector3_lineVertices = [];
+
+  var _iterator9 = _createForOfIteratorHelper(vertices),
+      _step9;
+
+  try {
+    for (_iterator9.s(); !(_step9 = _iterator9.n()).done;) {
+      var vertice = _step9.value;
+      vector3_lineVertices.push(new Vector3(vertice.x, vertice.y, vertice.z));
+    }
+  } catch (err) {
+    _iterator9.e(err);
+  } finally {
+    _iterator9.f();
+  }
+
+  var lineMaterial = new LineBasicMaterial({
+    color: 0x0000ff
+  });
+  var lineGeometry = new BufferGeometry().setFromPoints(vector3_lineVertices);
+  var createdLine = new Line(lineGeometry, lineMaterial);
+  return createdLine;
 }
 /* Resalta el elemento 3D en la escena de three */
 

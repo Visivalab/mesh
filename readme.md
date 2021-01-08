@@ -7,15 +7,15 @@
 - [ ] Guardar las caras earcut en db para que no se tengan que generar en cada polígono al cargar
 - [x] Medir distancia entre dos puntos
 - [x] Guardar medidas como si fueran poligonos o capas
-- [ ] Cargar medidas al proyecto
-  - [ ] En el visor 3D
+- [x] Cargar medidas al proyecto
+  - [x] En el visor 3D
   - [x] En la gui
 - [x] Borrar medidas
 - [x] Editar medidas (el nombre solo)
 - [ ] Ver info de la medida una vez guardada
   - [ ] Pulsando sobre la linea?
   - [ ] Ver info(nombre,distancia) como parte de la misma linea, en el centro?
-- [ ] Ruler no tiene linias uniendo los puntos. Debe tener claro.
+- [x] Ruler no tiene linias uniendo los puntos. Debe tener claro.
 - [ ] Seria interesante ver como hacer un elemento 3d que se vea siempre por encima de los demás por mas que todo rote y se tape etc.
 
 #### Bugs ####

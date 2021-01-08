@@ -25,6 +25,7 @@ let composer, outlinePass
 let container, mainGui
 // Variables globales donde guardar un array con los objetos en escena, para poder verlos y modificarlos siempre
 let scenePolygons = {}
+let sceneRulers = {}
 //let sceneMeshes = {}
 // Variable global para guardar el id del proyecto, que viene en la url
 let pathProjectId = window.location.pathname.split('/').pop()
@@ -410,12 +411,14 @@ const rulerModule = (function(){
 
     const intersects = intersections(event.clientX, event.clientY)
     let [px,py,pz] = [intersects[0].point.x, intersects[0].point.y, intersects[0].point.z]
-    rawPoints.push([px,py,pz])
+    rawPoints.push({x:px,y:py,z:pz})
 
     let point = createPoint()
     clickingPoints.push(point)
     scene.add(point)
     point.position.set(px, py, pz)
+
+    if(prevVertice) scene.add( generateLine([intersects[0].point, prevVertice]) )
 
     let distanceFromPrev = prevVertice?.distanceTo(intersects[0].point)
     prevVertice = intersects[0].point
@@ -711,9 +714,15 @@ function loadPolygons(polygons){
 function loadRulers(rulers){
   for(let ruler of rulers){
     addGUIRuler(ruler)
-
-    //Cargar tambien en la escena
+    
+    let geometry = generateLine(ruler.points)
+    scene.add(geometry)
+    sceneRulers[ruler._id] = {
+      data: ruler,
+      geometry
+    }
   }
+  console.log(sceneRulers)
 }
 
 function loadSingleMesh(id,data){
@@ -842,6 +851,19 @@ function generatePolygon(vertices){
   createdPolygon.sceneType = 'polygon' // Le añadimos esta propiedad para que quede constancia en algun lado de que es un poligono. Nos servirá para cuando se pulse con el ratón para seleccionarlo
   
   return createdPolygon
+}
+/* Genera una linea a partir de un array de objetos {x:,y:,z:} o de vector3s 
+Se encarga de crear los vector3 necesarios para los vertices en caso de que no */
+function generateLine(vertices){
+  let vector3_lineVertices = []
+
+  for(let vertice of vertices) vector3_lineVertices.push(new THREE.Vector3( vertice.x, vertice.y, vertice.z ))
+
+  const lineMaterial = new THREE.LineBasicMaterial( { color: 0x0000ff } );
+  const lineGeometry = new THREE.BufferGeometry().setFromPoints( vector3_lineVertices );
+  const createdLine = new THREE.Line( lineGeometry, lineMaterial );
+
+  return createdLine
 }
 /* Resalta el elemento 3D en la escena de three */
 function highlight3DObject(object){

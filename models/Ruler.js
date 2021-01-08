@@ -3,7 +3,7 @@ const mongoose = require('mongoose')
 const rulerSchema = new mongoose.Schema({
   name: String,
   date: Date,
-  points: Array,
+  points: [Object],
   color: String
 })
 
