@@ -1,5 +1,56 @@
 'use strict';
 
+function _setPrototypeOf(o, p) {
+  _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) {
+    o.__proto__ = p;
+    return o;
+  };
+
+  return _setPrototypeOf(o, p);
+}
+
+function _isNativeReflectConstruct() {
+  if (typeof Reflect === "undefined" || !Reflect.construct) return false;
+  if (Reflect.construct.sham) return false;
+  if (typeof Proxy === "function") return true;
+
+  try {
+    Date.prototype.toString.call(Reflect.construct(Date, [], function () {}));
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function _construct(Parent, args, Class) {
+  if (_isNativeReflectConstruct()) {
+    _construct = Reflect.construct;
+  } else {
+    _construct = function _construct(Parent, args, Class) {
+      var a = [null];
+      a.push.apply(a, args);
+      var Constructor = Function.bind.apply(Parent, a);
+      var instance = new Constructor();
+      if (Class) _setPrototypeOf(instance, Class.prototype);
+      return instance;
+    };
+  }
+
+  return _construct.apply(null, arguments);
+}
+
+function _toConsumableArray(arr) {
+  return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _unsupportedIterableToArray(arr) || _nonIterableSpread();
+}
+
+function _arrayWithoutHoles(arr) {
+  if (Array.isArray(arr)) return _arrayLikeToArray(arr);
+}
+
+function _iterableToArray(iter) {
+  if (typeof Symbol !== "undefined" && Symbol.iterator in Object(iter)) return Array.from(iter);
+}
+
 function _unsupportedIterableToArray(o, minLen) {
   if (!o) return;
   if (typeof o === "string") return _arrayLikeToArray(o, minLen);
@@ -15,6 +66,10 @@ function _arrayLikeToArray(arr, len) {
   for (var i = 0, arr2 = new Array(len); i < len; i++) arr2[i] = arr[i];
 
   return arr2;
+}
+
+function _nonIterableSpread() {
+  throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
 }
 
 function _createForOfIteratorHelper(o, allowArrayLike) {
@@ -53918,8 +53973,9 @@ var rulerModule = function () {
     point.position.set(px, py, pz);
 
     if (prevVertice) {
-      scene.add(generateLine([intersects[0].point, prevVertice]));
-      overscene.add(generateLine([intersects[0].point, prevVertice], true));
+      //!! Fallará, no sé si generateLine va a poder usar rawPoints
+      scene.add(generateLine(rawPoints));
+      overscene.add(generateLine(rawPoints, true));
     }
 
     var distanceFromPrev = (_prevVertice = prevVertice) === null || _prevVertice === void 0 ? void 0 : _prevVertice.distanceTo(intersects[0].point);
@@ -54196,8 +54252,6 @@ function loadPolygons(polygons) {
   } finally {
     _iterator6.f();
   }
-
-  console.log(scenePolygons);
 }
 
 function loadRulers(rulers) {
@@ -54209,9 +54263,8 @@ function loadRulers(rulers) {
       var ruler = _step7.value;
       addGUIRuler(ruler);
       var geometry = generateLine(ruler.points);
-      var hiddenGeometry = generateLine(ruler.points, true);
-      scene.add(geometry); //overscene.add(hiddenGeometry)
-
+      scene.add(geometry);
+      overscene.add(generateLine(ruler.points, true));
       sceneRulers[ruler._id] = {
         data: ruler,
         geometry: geometry
@@ -54222,8 +54275,6 @@ function loadRulers(rulers) {
   } finally {
     _iterator7.f();
   }
-
-  console.log(sceneRulers);
 }
 
 function loadSingleMesh(id, data) {
@@ -54357,14 +54408,12 @@ function generatePolygon(vertices) {
 }
 /* Genera una linea a partir de un array de objetos {x:,y:,z:} o de vector3s 
 Se encarga de crear los vector3 necesarios para los vertices en caso de que no */
-//!! Repasar todos los generateLines, estoy intentando hacer un cilidro de cada linia para poder darle opacidad y grosor, pero no terminé.
 
 
 function generateLine(vertices) {
   var hiddenGeometry = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
   var vector3_lineVertices = [];
   var prevPoint = null;
-  var cilynders = [];
 
   var _iterator9 = _createForOfIteratorHelper(vertices),
       _step9;
@@ -54373,7 +54422,7 @@ function generateLine(vertices) {
     for (_iterator9.s(); !(_step9 = _iterator9.n()).done;) {
       var vertice = _step9.value;
       vector3_lineVertices.push(new Vector3(vertice.x, vertice.y, vertice.z));
-    } // Crear cilindres en contes de linies https://stackoverflow.com/questions/15316127/three-js-line-vector-to-cylinder
+    } // Hay que crear cilindros en lugar de línias para poder controlar el grosor y la opacidad https://stackoverflow.com/questions/15316127/three-js-line-vector-to-cylinder
 
   } catch (err) {
     _iterator9.e(err);
@@ -54382,17 +54431,32 @@ function generateLine(vertices) {
   }
 
   var cylinderMesh = function cylinderMesh(pointX, pointY) {
-    // edge from X to Y
-    var direction = new Vector3().subVectors(pointY, pointX);
-    var material = new MeshBasicMaterial({
-      color: 0x5B5B5B
-    }); // Make the geometry (of "direction" length)
+    var hidden = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
+    var direction = new Vector3().subVectors(pointY, pointX); // Las líneas escondidas deben tener opacidad y un grosor ligeramente mas pequeño para que no aparezcan por encima de las no escondidas
+    // Aparte de otros cambios que podamos querer como color etc
 
-    var geometry = new CylinderGeometry(0.04, 0.04, direction.length(), 6, 4, true); // shift it so one end rests on the origin
+    var normalMaterial = {
+      color: 0x5B5B5B,
+      opacity: 1
+    },
+        hiddenLinesMaterial = {
+      color: 0x5B5B5B,
+      opacity: 0.5,
+      transparent: true
+    },
+        normalGeometry = [0.04, 0.04, direction.length(), 6, 4, true],
+        hiddenLinesGeometry = [0.01, 0.01, direction.length(), 6, 4, true];
+    var materialOptions = hidden ? hiddenLinesMaterial : normalMaterial;
+    var geometryOptions = hidden ? hiddenLinesGeometry : normalGeometry; // edge from X to Y
 
-    geometry.applyMatrix(new Matrix4().makeTranslation(0, direction.length() / 2, 0)); // rotate it the right way for lookAt to work
+    var material = new MeshBasicMaterial(materialOptions); // Make the geometry (of "direction" length)
 
-    geometry.applyMatrix(new Matrix4().makeRotationX(MathUtils.degToRad(90))); // Make a mesh with the geometry
+    var geometry = _construct(CylinderGeometry, _toConsumableArray(geometryOptions)); // shift it so one end rests on the origin
+
+
+    geometry.applyMatrix4(new Matrix4().makeTranslation(0, direction.length() / 2, 0)); // rotate it the right way for lookAt to work
+
+    geometry.applyMatrix4(new Matrix4().makeRotationX(MathUtils.degToRad(90))); // Make a mesh with the geometry
 
     var mesh = new Mesh(geometry, material); // Position it where we want
 
@@ -54402,36 +54466,20 @@ function generateLine(vertices) {
     return mesh;
   };
 
-  if (hiddenGeometry) {
-    var _iterator10 = _createForOfIteratorHelper(vector3_lineVertices),
-        _step10;
+  var ruler = new Group();
 
-    try {
-      for (_iterator10.s(); !(_step10 = _iterator10.n()).done;) {
-        var point = _step10.value;
+  for (var _i = 0, _vector3_lineVertices = vector3_lineVertices; _i < _vector3_lineVertices.length; _i++) {
+    var point = _vector3_lineVertices[_i];
 
-        if (prevPoint) {
-          var cil = cylinderMesh(point, prevPoint);
-          cilynders.push(cil);
-          overscene.add(cil);
-          prevPoint = point;
-        }
-      }
-    } catch (err) {
-      _iterator10.e(err);
-    } finally {
-      _iterator10.f();
+    if (prevPoint) {
+      var cil = cylinderMesh(point, prevPoint, hiddenGeometry);
+      ruler.add(cil);
     }
 
-    return cilynders;
-  } else {
-    var lineMaterial = new LineBasicMaterial({
-      color: 'blue'
-    });
-    var lineGeometry = new BufferGeometry().setFromPoints(vector3_lineVertices);
-    var createdLine = new Line(lineGeometry, lineMaterial);
-    return createdLine;
+    prevPoint = point;
   }
+
+  return ruler;
 }
 /* Resalta el elemento 3D en la escena de three */
 

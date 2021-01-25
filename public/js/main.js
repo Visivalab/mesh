@@ -419,8 +419,9 @@ const rulerModule = (function(){
     point.position.set(px, py, pz)
 
     if(prevVertice){
-      scene.add( generateLine([intersects[0].point, prevVertice]) )
-      overscene.add( generateLine([intersects[0].point, prevVertice], true) )
+      //!! Fallará, no sé si generateLine va a poder usar rawPoints
+      scene.add( generateLine(rawPoints) )
+      overscene.add( generateLine(rawPoints, true) )
     } 
 
     let distanceFromPrev = prevVertice?.distanceTo(intersects[0].point)
@@ -719,7 +720,6 @@ function loadPolygons(polygons){
       geometry
     }
   }
-  console.log(scenePolygons)
 }
 
 function loadRulers(rulers){
@@ -727,16 +727,14 @@ function loadRulers(rulers){
     addGUIRuler(ruler)
     
     let geometry = generateLine(ruler.points)
-    let hiddenGeometry = generateLine(ruler.points, true)
     scene.add(geometry)
-    //overscene.add(hiddenGeometry)
+    overscene.add(generateLine(ruler.points, true))
     
     sceneRulers[ruler._id] = {
       data: ruler,
       geometry
     }
   }
-  console.log(sceneRulers)
 }
 
 function loadSingleMesh(id,data){
@@ -866,28 +864,44 @@ function generatePolygon(vertices){
   
   return createdPolygon
 }
+
 /* Genera una linea a partir de un array de objetos {x:,y:,z:} o de vector3s 
 Se encarga de crear los vector3 necesarios para los vertices en caso de que no */
-
-//!! Repasar todos los generateLines, estoy intentando hacer un cilidro de cada linia para poder darle opacidad y grosor, pero no terminé.
 function generateLine(vertices, hiddenGeometry = false){
   let vector3_lineVertices = []
   let prevPoint = null
-  let cilynders = []
-
+  
   for(let vertice of vertices) vector3_lineVertices.push(new THREE.Vector3( vertice.x, vertice.y, vertice.z ))
 
-  // Crear cilindres en contes de linies https://stackoverflow.com/questions/15316127/three-js-line-vector-to-cylinder
-  const cylinderMesh = function (pointX, pointY) {
-    // edge from X to Y
+  // Hay que crear cilindros en lugar de línias para poder controlar el grosor y la opacidad https://stackoverflow.com/questions/15316127/three-js-line-vector-to-cylinder
+  const cylinderMesh = function (pointX, pointY, hidden = false) {
     let direction = new THREE.Vector3().subVectors(pointY, pointX);
-    const material = new THREE.MeshBasicMaterial({ color: 0x5B5B5B });
+    
+    // Las líneas escondidas deben tener opacidad y un grosor ligeramente mas pequeño para que no aparezcan por encima de las no escondidas
+    // Aparte de otros cambios que podamos querer como color etc
+    let normalMaterial = { 
+      color: 0x5B5B5B, 
+      opacity: 1 
+    },
+    hiddenLinesMaterial = { 
+      color: 0x5B5B5B, 
+      opacity: 0.5, 
+      transparent: true 
+    },
+    normalGeometry = [0.04, 0.04, direction.length(), 6, 4, true],
+    hiddenLinesGeometry = [0.01, 0.01, direction.length(), 6, 4, true]
+      
+    let materialOptions = hidden ? hiddenLinesMaterial : normalMaterial
+    let geometryOptions = hidden ? hiddenLinesGeometry : normalGeometry
+
+    // edge from X to Y
+    const material = new THREE.MeshBasicMaterial(materialOptions);
     // Make the geometry (of "direction" length)
-    let geometry = new THREE.CylinderGeometry(0.04, 0.04, direction.length(), 6, 4, true);
+    let geometry = new THREE.CylinderGeometry(...geometryOptions);
     // shift it so one end rests on the origin
-    geometry.applyMatrix(new THREE.Matrix4().makeTranslation(0, direction.length() / 2, 0));
+    geometry.applyMatrix4(new THREE.Matrix4().makeTranslation(0, direction.length() / 2, 0));
     // rotate it the right way for lookAt to work
-    geometry.applyMatrix(new THREE.Matrix4().makeRotationX(THREE.Math.degToRad(90)));
+    geometry.applyMatrix4(new THREE.Matrix4().makeRotationX(THREE.Math.degToRad(90)));
     // Make a mesh with the geometry
     let mesh = new THREE.Mesh(geometry, material);
     // Position it where we want
@@ -897,27 +911,18 @@ function generateLine(vertices, hiddenGeometry = false){
 
     return mesh;
   }
-
-  if(hiddenGeometry){
-    for(let point of vector3_lineVertices){
-      if(prevPoint){
-        let cil = cylinderMesh(point, prevPoint)
-        cilynders.push(cil)
-        overscene.add(cil)
-
-        prevPoint = point
-      }
-    }
-    return cilynders
-    
-  }else{
-    const lineMaterial = new THREE.LineBasicMaterial( { color: 'blue' } )
-    const lineGeometry = new THREE.BufferGeometry().setFromPoints( vector3_lineVertices );
-    const createdLine = new THREE.Line( lineGeometry, lineMaterial );
   
-    return createdLine
+  const ruler = new THREE.Group();
+
+  for(let point of vector3_lineVertices){
+    if(prevPoint){
+      let cil = cylinderMesh(point, prevPoint, hiddenGeometry)
+      ruler.add( cil );
+    }
+    prevPoint = point
   }
 
+  return ruler
 }
 /* Resalta el elemento 3D en la escena de three */
 function highlight3DObject(object){
