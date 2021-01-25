@@ -14,7 +14,9 @@
 - [x] Editar medidas (el nombre solo)
 - [ ] Ver info de la medida una vez guardada
   - [ ] Pulsando sobre la linea?
-  - [ ] Ver info(nombre,distancia) como parte de la misma linea, en el centro?
+  - [ ] Ver info(nombre,distancia) como parte de la misma linea, en el centro? 
+    https://stackoverflow.com/questions/52858125/how-do-i-make-a-three-plane-always-face-the-camera
+    https://threejsfundamentals.org/threejs/lessons/threejs-align-html-elements-to-3d.html
 - [x] Ruler no tiene linias uniendo los puntos. Debe tener claro.
 - [ ] Seria interesante ver como hacer un elemento 3d que se vea siempre por encima de los demás por mas que todo rote y se tape etc.
   A medio solucionar. Creamos una escena por encima de la normal (overscene) donde añadimos los elementos que pueden ser tapados pero visibles.

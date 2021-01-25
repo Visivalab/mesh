@@ -27,9 +27,8 @@ let container, mainGui
 let scenePolygons = {}
 let sceneRulers = {}
 //let sceneMeshes = {}
-// Variable global para guardar el id del proyecto, que viene en la url
-let pathProjectId = window.location.pathname.split('/').pop()
 
+let pathProjectId = document.querySelector('#projectId').textContent
 let localMeshRoute = false // cambiar localMeshRoute a true para ver meshes de local en vez de las que vienen de la ruta de aws 
 
 
@@ -416,13 +415,12 @@ const rulerModule = (function(){
     let point = createPoint()
     clickingPoints.push(point)
     scene.add(point)
-    overscene.add(point)
 
     point.position.set(px, py, pz)
 
     if(prevVertice){
       scene.add( generateLine([intersects[0].point, prevVertice]) )
-      overscene.add( generateLine([intersects[0].point, prevVertice]) )
+      overscene.add( generateLine([intersects[0].point, prevVertice], true) )
     } 
 
     let distanceFromPrev = prevVertice?.distanceTo(intersects[0].point)
@@ -729,8 +727,9 @@ function loadRulers(rulers){
     addGUIRuler(ruler)
     
     let geometry = generateLine(ruler.points)
+    let hiddenGeometry = generateLine(ruler.points, true)
     scene.add(geometry)
-    overscene.add(geometry)
+    //overscene.add(hiddenGeometry)
     
     sceneRulers[ruler._id] = {
       data: ruler,
@@ -869,16 +868,56 @@ function generatePolygon(vertices){
 }
 /* Genera una linea a partir de un array de objetos {x:,y:,z:} o de vector3s 
 Se encarga de crear los vector3 necesarios para los vertices en caso de que no */
-function generateLine(vertices){
+
+//!! Repasar todos los generateLines, estoy intentando hacer un cilidro de cada linia para poder darle opacidad y grosor, pero no terminé.
+function generateLine(vertices, hiddenGeometry = false){
   let vector3_lineVertices = []
+  let prevPoint = null
+  let cilynders = []
 
   for(let vertice of vertices) vector3_lineVertices.push(new THREE.Vector3( vertice.x, vertice.y, vertice.z ))
 
-  const lineMaterial = new THREE.LineBasicMaterial( { color: 0x0000ff, linewidth: 2 } );
-  const lineGeometry = new THREE.BufferGeometry().setFromPoints( vector3_lineVertices );
-  const createdLine = new THREE.Line( lineGeometry, lineMaterial );
+  // Crear cilindres en contes de linies https://stackoverflow.com/questions/15316127/three-js-line-vector-to-cylinder
+  const cylinderMesh = function (pointX, pointY) {
+    // edge from X to Y
+    let direction = new THREE.Vector3().subVectors(pointY, pointX);
+    const material = new THREE.MeshBasicMaterial({ color: 0x5B5B5B });
+    // Make the geometry (of "direction" length)
+    let geometry = new THREE.CylinderGeometry(0.04, 0.04, direction.length(), 6, 4, true);
+    // shift it so one end rests on the origin
+    geometry.applyMatrix(new THREE.Matrix4().makeTranslation(0, direction.length() / 2, 0));
+    // rotate it the right way for lookAt to work
+    geometry.applyMatrix(new THREE.Matrix4().makeRotationX(THREE.Math.degToRad(90)));
+    // Make a mesh with the geometry
+    let mesh = new THREE.Mesh(geometry, material);
+    // Position it where we want
+    mesh.position.copy(pointX);
+    // And make it point to where we want
+    mesh.lookAt(pointY);
 
-  return createdLine
+    return mesh;
+  }
+
+  if(hiddenGeometry){
+    for(let point of vector3_lineVertices){
+      if(prevPoint){
+        let cil = cylinderMesh(point, prevPoint)
+        cilynders.push(cil)
+        overscene.add(cil)
+
+        prevPoint = point
+      }
+    }
+    return cilynders
+    
+  }else{
+    const lineMaterial = new THREE.LineBasicMaterial( { color: 'blue' } )
+    const lineGeometry = new THREE.BufferGeometry().setFromPoints( vector3_lineVertices );
+    const createdLine = new THREE.Line( lineGeometry, lineMaterial );
+  
+    return createdLine
+  }
+
 }
 /* Resalta el elemento 3D en la escena de three */
 function highlight3DObject(object){
@@ -901,3 +940,11 @@ const createPoint = () => {
 
   return point
 }
+
+
+// Abrir cerrar project info
+let projectInfoB = document.querySelector('#projectInfo--button')
+let projectInfo = document.querySelector('#projectInfo')
+projectInfoB.addEventListener('click',()=>{
+  projectInfo.classList.toggle('hidden')
+})

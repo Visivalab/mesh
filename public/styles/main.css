@@ -103,3 +103,41 @@ button:focus{
 .toolViewer li{
   margin: 5px 0;
 }
+
+
+#projectInfo--button{
+  --size: 30px;
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  width: var(--size);
+  height: var(--size);
+  background-color: white;
+  border-radius: 5px;
+  text-align: center;
+  line-height: var(--size);
+  font-weight: 900;
+  cursor: pointer;
+}
+#projectInfo{
+  position: fixed;
+  top: 60px;
+  left: 20px;
+  display: flex;
+  flex-direction: column;
+  background-color: white;
+  border-radius: 10px;
+  padding: 15px
+}
+#projectInfo p{
+  margin: 3px 0
+}
+#projectInfo > div{
+  margin-bottom: 10px
+}
+#projectInfo > div:last-child{
+  margin-bottom: 0
+}
+#projectInfo.hidden{
+  display:none
+}

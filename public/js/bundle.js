@@ -28609,6 +28609,301 @@ Geometry.prototype = Object.assign( Object.create( EventDispatcher.prototype ), 
 
 } );
 
+class CylinderBufferGeometry extends BufferGeometry {
+
+	constructor( radiusTop, radiusBottom, height, radialSegments, heightSegments, openEnded, thetaStart, thetaLength ) {
+
+		super();
+		this.type = 'CylinderBufferGeometry';
+
+		this.parameters = {
+			radiusTop: radiusTop,
+			radiusBottom: radiusBottom,
+			height: height,
+			radialSegments: radialSegments,
+			heightSegments: heightSegments,
+			openEnded: openEnded,
+			thetaStart: thetaStart,
+			thetaLength: thetaLength
+		};
+
+		const scope = this;
+
+		radiusTop = radiusTop !== undefined ? radiusTop : 1;
+		radiusBottom = radiusBottom !== undefined ? radiusBottom : 1;
+		height = height || 1;
+
+		radialSegments = Math.floor( radialSegments ) || 8;
+		heightSegments = Math.floor( heightSegments ) || 1;
+
+		openEnded = openEnded !== undefined ? openEnded : false;
+		thetaStart = thetaStart !== undefined ? thetaStart : 0.0;
+		thetaLength = thetaLength !== undefined ? thetaLength : Math.PI * 2;
+
+		// buffers
+
+		const indices = [];
+		const vertices = [];
+		const normals = [];
+		const uvs = [];
+
+		// helper variables
+
+		let index = 0;
+		const indexArray = [];
+		const halfHeight = height / 2;
+		let groupStart = 0;
+
+		// generate geometry
+
+		generateTorso();
+
+		if ( openEnded === false ) {
+
+			if ( radiusTop > 0 ) generateCap( true );
+			if ( radiusBottom > 0 ) generateCap( false );
+
+		}
+
+		// build geometry
+
+		this.setIndex( indices );
+		this.setAttribute( 'position', new Float32BufferAttribute( vertices, 3 ) );
+		this.setAttribute( 'normal', new Float32BufferAttribute( normals, 3 ) );
+		this.setAttribute( 'uv', new Float32BufferAttribute( uvs, 2 ) );
+
+		function generateTorso() {
+
+			const normal = new Vector3();
+			const vertex = new Vector3();
+
+			let groupCount = 0;
+
+			// this will be used to calculate the normal
+			const slope = ( radiusBottom - radiusTop ) / height;
+
+			// generate vertices, normals and uvs
+
+			for ( let y = 0; y <= heightSegments; y ++ ) {
+
+				const indexRow = [];
+
+				const v = y / heightSegments;
+
+				// calculate the radius of the current row
+
+				const radius = v * ( radiusBottom - radiusTop ) + radiusTop;
+
+				for ( let x = 0; x <= radialSegments; x ++ ) {
+
+					const u = x / radialSegments;
+
+					const theta = u * thetaLength + thetaStart;
+
+					const sinTheta = Math.sin( theta );
+					const cosTheta = Math.cos( theta );
+
+					// vertex
+
+					vertex.x = radius * sinTheta;
+					vertex.y = - v * height + halfHeight;
+					vertex.z = radius * cosTheta;
+					vertices.push( vertex.x, vertex.y, vertex.z );
+
+					// normal
+
+					normal.set( sinTheta, slope, cosTheta ).normalize();
+					normals.push( normal.x, normal.y, normal.z );
+
+					// uv
+
+					uvs.push( u, 1 - v );
+
+					// save index of vertex in respective row
+
+					indexRow.push( index ++ );
+
+				}
+
+				// now save vertices of the row in our index array
+
+				indexArray.push( indexRow );
+
+			}
+
+			// generate indices
+
+			for ( let x = 0; x < radialSegments; x ++ ) {
+
+				for ( let y = 0; y < heightSegments; y ++ ) {
+
+					// we use the index array to access the correct indices
+
+					const a = indexArray[ y ][ x ];
+					const b = indexArray[ y + 1 ][ x ];
+					const c = indexArray[ y + 1 ][ x + 1 ];
+					const d = indexArray[ y ][ x + 1 ];
+
+					// faces
+
+					indices.push( a, b, d );
+					indices.push( b, c, d );
+
+					// update group counter
+
+					groupCount += 6;
+
+				}
+
+			}
+
+			// add a group to the geometry. this will ensure multi material support
+
+			scope.addGroup( groupStart, groupCount, 0 );
+
+			// calculate new start value for groups
+
+			groupStart += groupCount;
+
+		}
+
+		function generateCap( top ) {
+
+			// save the index of the first center vertex
+			const centerIndexStart = index;
+
+			const uv = new Vector2();
+			const vertex = new Vector3();
+
+			let groupCount = 0;
+
+			const radius = ( top === true ) ? radiusTop : radiusBottom;
+			const sign = ( top === true ) ? 1 : - 1;
+
+			// first we generate the center vertex data of the cap.
+			// because the geometry needs one set of uvs per face,
+			// we must generate a center vertex per face/segment
+
+			for ( let x = 1; x <= radialSegments; x ++ ) {
+
+				// vertex
+
+				vertices.push( 0, halfHeight * sign, 0 );
+
+				// normal
+
+				normals.push( 0, sign, 0 );
+
+				// uv
+
+				uvs.push( 0.5, 0.5 );
+
+				// increase index
+
+				index ++;
+
+			}
+
+			// save the index of the last center vertex
+			const centerIndexEnd = index;
+
+			// now we generate the surrounding vertices, normals and uvs
+
+			for ( let x = 0; x <= radialSegments; x ++ ) {
+
+				const u = x / radialSegments;
+				const theta = u * thetaLength + thetaStart;
+
+				const cosTheta = Math.cos( theta );
+				const sinTheta = Math.sin( theta );
+
+				// vertex
+
+				vertex.x = radius * sinTheta;
+				vertex.y = halfHeight * sign;
+				vertex.z = radius * cosTheta;
+				vertices.push( vertex.x, vertex.y, vertex.z );
+
+				// normal
+
+				normals.push( 0, sign, 0 );
+
+				// uv
+
+				uv.x = ( cosTheta * 0.5 ) + 0.5;
+				uv.y = ( sinTheta * 0.5 * sign ) + 0.5;
+				uvs.push( uv.x, uv.y );
+
+				// increase index
+
+				index ++;
+
+			}
+
+			// generate indices
+
+			for ( let x = 0; x < radialSegments; x ++ ) {
+
+				const c = centerIndexStart + x;
+				const i = centerIndexEnd + x;
+
+				if ( top === true ) {
+
+					// face top
+
+					indices.push( i, i + 1, c );
+
+				} else {
+
+					// face bottom
+
+					indices.push( i + 1, i, c );
+
+				}
+
+				groupCount += 3;
+
+			}
+
+			// add a group to the geometry. this will ensure multi material support
+
+			scope.addGroup( groupStart, groupCount, top === true ? 1 : 2 );
+
+			// calculate new start value for groups
+
+			groupStart += groupCount;
+
+		}
+
+	}
+
+}
+
+class CylinderGeometry extends Geometry {
+
+	constructor( radiusTop, radiusBottom, height, radialSegments, heightSegments, openEnded, thetaStart, thetaLength ) {
+
+		super();
+		this.type = 'CylinderGeometry';
+
+		this.parameters = {
+			radiusTop: radiusTop,
+			radiusBottom: radiusBottom,
+			height: height,
+			radialSegments: radialSegments,
+			heightSegments: heightSegments,
+			openEnded: openEnded,
+			thetaStart: thetaStart,
+			thetaLength: thetaLength
+		};
+
+		this.fromBufferGeometry( new CylinderBufferGeometry( radiusTop, radiusBottom, height, radialSegments, heightSegments, openEnded, thetaStart, thetaLength ) );
+		this.mergeVertices();
+
+	}
+
+}
+
 class PolyhedronBufferGeometry extends BufferGeometry {
 
 	constructor( vertices, indices, radius, detail ) {
@@ -53103,9 +53398,8 @@ var container, mainGui; // Variables globales donde guardar un array con los obj
 
 var scenePolygons = {};
 var sceneRulers = {}; //let sceneMeshes = {}
-// Variable global para guardar el id del proyecto, que viene en la url
 
-var pathProjectId = window.location.pathname.split('/').pop();
+var pathProjectId = document.querySelector('#projectId').textContent;
 // Objeto que define la creación de cada modal, para poder encontrarla y editarla facilmente
 // No estoy muy seguro de la utilidad o practicidad real de esto
 // Además no puedo modificar o cerrar las modales desde otro lado porque no estan definidas fuera de este scope, que tampoco es del todo malo.
@@ -53621,12 +53915,11 @@ var rulerModule = function () {
     var point = createPoint();
     clickingPoints.push(point);
     scene.add(point);
-    overscene.add(point);
     point.position.set(px, py, pz);
 
     if (prevVertice) {
       scene.add(generateLine([intersects[0].point, prevVertice]));
-      overscene.add(generateLine([intersects[0].point, prevVertice]));
+      overscene.add(generateLine([intersects[0].point, prevVertice], true));
     }
 
     var distanceFromPrev = (_prevVertice = prevVertice) === null || _prevVertice === void 0 ? void 0 : _prevVertice.distanceTo(intersects[0].point);
@@ -53916,8 +54209,9 @@ function loadRulers(rulers) {
       var ruler = _step7.value;
       addGUIRuler(ruler);
       var geometry = generateLine(ruler.points);
-      scene.add(geometry);
-      overscene.add(geometry);
+      var hiddenGeometry = generateLine(ruler.points, true);
+      scene.add(geometry); //overscene.add(hiddenGeometry)
+
       sceneRulers[ruler._id] = {
         data: ruler,
         geometry: geometry
@@ -54063,10 +54357,14 @@ function generatePolygon(vertices) {
 }
 /* Genera una linea a partir de un array de objetos {x:,y:,z:} o de vector3s 
 Se encarga de crear los vector3 necesarios para los vertices en caso de que no */
+//!! Repasar todos los generateLines, estoy intentando hacer un cilidro de cada linia para poder darle opacidad y grosor, pero no terminé.
 
 
 function generateLine(vertices) {
+  var hiddenGeometry = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
   var vector3_lineVertices = [];
+  var prevPoint = null;
+  var cilynders = [];
 
   var _iterator9 = _createForOfIteratorHelper(vertices),
       _step9;
@@ -54075,20 +54373,65 @@ function generateLine(vertices) {
     for (_iterator9.s(); !(_step9 = _iterator9.n()).done;) {
       var vertice = _step9.value;
       vector3_lineVertices.push(new Vector3(vertice.x, vertice.y, vertice.z));
-    }
+    } // Crear cilindres en contes de linies https://stackoverflow.com/questions/15316127/three-js-line-vector-to-cylinder
+
   } catch (err) {
     _iterator9.e(err);
   } finally {
     _iterator9.f();
   }
 
-  var lineMaterial = new LineBasicMaterial({
-    color: 0x0000ff,
-    linewidth: 2
-  });
-  var lineGeometry = new BufferGeometry().setFromPoints(vector3_lineVertices);
-  var createdLine = new Line(lineGeometry, lineMaterial);
-  return createdLine;
+  var cylinderMesh = function cylinderMesh(pointX, pointY) {
+    // edge from X to Y
+    var direction = new Vector3().subVectors(pointY, pointX);
+    var material = new MeshBasicMaterial({
+      color: 0x5B5B5B
+    }); // Make the geometry (of "direction" length)
+
+    var geometry = new CylinderGeometry(0.04, 0.04, direction.length(), 6, 4, true); // shift it so one end rests on the origin
+
+    geometry.applyMatrix(new Matrix4().makeTranslation(0, direction.length() / 2, 0)); // rotate it the right way for lookAt to work
+
+    geometry.applyMatrix(new Matrix4().makeRotationX(MathUtils.degToRad(90))); // Make a mesh with the geometry
+
+    var mesh = new Mesh(geometry, material); // Position it where we want
+
+    mesh.position.copy(pointX); // And make it point to where we want
+
+    mesh.lookAt(pointY);
+    return mesh;
+  };
+
+  if (hiddenGeometry) {
+    var _iterator10 = _createForOfIteratorHelper(vector3_lineVertices),
+        _step10;
+
+    try {
+      for (_iterator10.s(); !(_step10 = _iterator10.n()).done;) {
+        var point = _step10.value;
+
+        if (prevPoint) {
+          var cil = cylinderMesh(point, prevPoint);
+          cilynders.push(cil);
+          overscene.add(cil);
+          prevPoint = point;
+        }
+      }
+    } catch (err) {
+      _iterator10.e(err);
+    } finally {
+      _iterator10.f();
+    }
+
+    return cilynders;
+  } else {
+    var lineMaterial = new LineBasicMaterial({
+      color: 'blue'
+    });
+    var lineGeometry = new BufferGeometry().setFromPoints(vector3_lineVertices);
+    var createdLine = new Line(lineGeometry, lineMaterial);
+    return createdLine;
+  }
 }
 /* Resalta el elemento 3D en la escena de three */
 
@@ -54112,4 +54455,11 @@ var createPoint = function createPoint() {
   });
   var point = new Mesh(ico, material);
   return point;
-};
+}; // Abrir cerrar project info
+
+
+var projectInfoB = document.querySelector('#projectInfo--button');
+var projectInfo = document.querySelector('#projectInfo');
+projectInfoB.addEventListener('click', function () {
+  projectInfo.classList.toggle('hidden');
+});

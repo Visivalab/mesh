@@ -40,9 +40,7 @@ const rulerController = require('./controllers/rulerController')
 let jsonParser = bodyParser.json()
 //let urlencodedParser = bodyParser.urlencoded({ extended: false })
 
-app.get('/view/:id', (req, res) => {
-  res.render('index', { title:'Mesh view' })
-})
+app.get('/view/:id', projectController.renderProject )
 app.get('/admin', (req, res) => {
   res.render('admin/index', { title:'Admin Page' })
 })
