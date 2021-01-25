@@ -158,8 +158,11 @@ const polygonModule = (function(){
   
   function initPolygonSelection(){
     container.addEventListener('click',selectElement)
+
   }
   function selectElement(e){
+    for(let freeModal of [...document.querySelectorAll('.freeModal')]) freeModal.remove() // Quita cualquier freeModal que pueda haber por la escena
+
     const intersects = intersections(e.clientX, e.clientY)
     for(let intersected of intersects){
       if(intersected.object.sceneType === 'polygon'){
@@ -200,7 +203,6 @@ const polygonModule = (function(){
 
       freeModal.appendChild(link)
     }
-    
     
     document.querySelector('body').appendChild(freeModal)
   }

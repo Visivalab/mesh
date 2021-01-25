@@ -53658,6 +53658,12 @@ var polygonModule = function () {
   }
 
   function selectElement(e) {
+    for (var _i = 0, _arr = _toConsumableArray(document.querySelectorAll('.freeModal')); _i < _arr.length; _i++) {
+      var freeModal = _arr[_i];
+      freeModal.remove();
+    } // Quita cualquier freeModal que pueda haber por la escena
+
+
     var intersects = intersections(e.clientX, e.clientY);
 
     var _iterator = _createForOfIteratorHelper(intersects),
@@ -54536,8 +54542,8 @@ function generateLine(vertices) {
 
   var ruler = new Group();
 
-  for (var _i = 0, _vector3_lineVertices = vector3_lineVertices; _i < _vector3_lineVertices.length; _i++) {
-    var point = _vector3_lineVertices[_i];
+  for (var _i2 = 0, _vector3_lineVertices = vector3_lineVertices; _i2 < _vector3_lineVertices.length; _i2++) {
+    var point = _vector3_lineVertices[_i2];
 
     if (prevPoint) {
       var cil = cylinderMesh(point, prevPoint, hiddenGeometry);
