@@ -419,9 +419,12 @@ const rulerModule = (function(){
     point.position.set(px, py, pz)
 
     if(prevVertice){
-      //!! Fallará, no sé si generateLine va a poder usar rawPoints
-      scene.add( generateLine(rawPoints) )
-      overscene.add( generateLine(rawPoints, true) )
+      let geometry = generateLine(rawPoints)
+      let hiddenGeometry = generateLine(rawPoints, true)
+      for(let part of geometry.children) part.layers.set(31)
+      for(let part of hiddenGeometry.children) part.layers.set(31)
+      scene.add( geometry )
+      overscene.add( hiddenGeometry )
     } 
 
     let distanceFromPrev = prevVertice?.distanceTo(intersects[0].point)
@@ -710,9 +713,18 @@ function loadMeshes(meshes){
 }
 
 function loadPolygons(polygons){
+ // Si hay polygons registramos luz, camara y raycaster?? en la capa 30
+  ambientLight.layers.enable( 30 )
+  camera.layers.enable( 30 )
+  raycaster.layers.enable( 30 )
+  // Ponemos todos los poligonos en la misma capa(30) para tenerlos agrupados
+  // Tambien se podran apagar de uno en uno, pero lo que hará será crear y destruir el elemento en scene
+
   for( let polygon of polygons ){
     addGUIPolygon(polygon)
     let geometry = generatePolygon(polygon.points)
+
+    geometry.layers.set( 30 )
 
     scene.add( geometry )
     scenePolygons[polygon._id] = {
@@ -723,13 +735,25 @@ function loadPolygons(polygons){
 }
 
 function loadRulers(rulers){
+  // Si hay rulers registramos luz, camara y raycaster?? en la capa 31
+  ambientLight.layers.enable( 31 )
+  camera.layers.enable( 31 )
+  raycaster.layers.enable( 31 )
+  // Ponemos todos los rulers en la misma capa (31) para tenerlos agrupados
+  // Tambien se podran apagar de uno en uno, pero lo que hará será crear y destruir el elemento en scene
+
   for(let ruler of rulers){
     addGUIRuler(ruler)
-    
     let geometry = generateLine(ruler.points)
-    scene.add(geometry)
-    overscene.add(generateLine(ruler.points, true))
+    let hiddenGeometry = generateLine(ruler.points, true)
     
+    // Hay que recorrer todos los childrens de geometry(porque es un grupo de meshes(cilindros)) para cambiarlos de layer
+    for(let part of geometry.children) part.layers.set(31)
+    for(let part of hiddenGeometry.children) part.layers.set(31)
+
+    scene.add(geometry)
+    overscene.add(hiddenGeometry)
+
     sceneRulers[ruler._id] = {
       data: ruler,
       geometry
@@ -865,15 +889,15 @@ function generatePolygon(vertices){
   return createdPolygon
 }
 
-/* Genera una linea a partir de un array de objetos {x:,y:,z:} o de vector3s 
-Se encarga de crear los vector3 necesarios para los vertices en caso de que no */
+/* Genera una linea creada con cilindros a partir de un array de objetos {x:,y:,z:} o de vector3s 
+Hay que crear cilindros en lugar de línias para poder controlar el grosor y la opacidad - https://stackoverflow.com/questions/15316127/three-js-line-vector-to-cylinder
+Se encarga tambien de crear los vector3 necesarios para los vertices en caso de que no se le pase un vector3*/
 function generateLine(vertices, hiddenGeometry = false){
   let vector3_lineVertices = []
   let prevPoint = null
   
   for(let vertice of vertices) vector3_lineVertices.push(new THREE.Vector3( vertice.x, vertice.y, vertice.z ))
 
-  // Hay que crear cilindros en lugar de línias para poder controlar el grosor y la opacidad https://stackoverflow.com/questions/15316127/three-js-line-vector-to-cylinder
   const cylinderMesh = function (pointX, pointY, hidden = false) {
     let direction = new THREE.Vector3().subVectors(pointY, pointX);
     

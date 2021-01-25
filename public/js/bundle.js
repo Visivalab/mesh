@@ -53973,9 +53973,40 @@ var rulerModule = function () {
     point.position.set(px, py, pz);
 
     if (prevVertice) {
-      //!! Fallará, no sé si generateLine va a poder usar rawPoints
-      scene.add(generateLine(rawPoints));
-      overscene.add(generateLine(rawPoints, true));
+      var geometry = generateLine(rawPoints);
+      var hiddenGeometry = generateLine(rawPoints, true);
+
+      var _iterator6 = _createForOfIteratorHelper(geometry.children),
+          _step6;
+
+      try {
+        for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
+          var part = _step6.value;
+          part.layers.set(31);
+        }
+      } catch (err) {
+        _iterator6.e(err);
+      } finally {
+        _iterator6.f();
+      }
+
+      var _iterator7 = _createForOfIteratorHelper(hiddenGeometry.children),
+          _step7;
+
+      try {
+        for (_iterator7.s(); !(_step7 = _iterator7.n()).done;) {
+          var _part = _step7.value;
+
+          _part.layers.set(31);
+        }
+      } catch (err) {
+        _iterator7.e(err);
+      } finally {
+        _iterator7.f();
+      }
+
+      scene.add(geometry);
+      overscene.add(hiddenGeometry);
     }
 
     var distanceFromPrev = (_prevVertice = prevVertice) === null || _prevVertice === void 0 ? void 0 : _prevVertice.distanceTo(intersects[0].point);
@@ -54233,14 +54264,21 @@ function loadMeshes(meshes) {
 }
 
 function loadPolygons(polygons) {
-  var _iterator6 = _createForOfIteratorHelper(polygons),
-      _step6;
+  // Si hay polygons registramos luz, camara y raycaster?? en la capa 30
+  ambientLight.layers.enable(30);
+  camera.layers.enable(30);
+  raycaster.layers.enable(30); // Ponemos todos los poligonos en la misma capa(30) para tenerlos agrupados
+  // Tambien se podran apagar de uno en uno, pero lo que hará será crear y destruir el elemento en scene
+
+  var _iterator8 = _createForOfIteratorHelper(polygons),
+      _step8;
 
   try {
-    for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
-      var polygon = _step6.value;
+    for (_iterator8.s(); !(_step8 = _iterator8.n()).done;) {
+      var polygon = _step8.value;
       addGUIPolygon(polygon);
       var geometry = generatePolygon(polygon.points);
+      geometry.layers.set(30);
       scene.add(geometry);
       scenePolygons[polygon._id] = {
         data: polygon,
@@ -54248,32 +54286,69 @@ function loadPolygons(polygons) {
       };
     }
   } catch (err) {
-    _iterator6.e(err);
+    _iterator8.e(err);
   } finally {
-    _iterator6.f();
+    _iterator8.f();
   }
 }
 
 function loadRulers(rulers) {
-  var _iterator7 = _createForOfIteratorHelper(rulers),
-      _step7;
+  // Si hay rulers registramos luz, camara y raycaster?? en la capa 31
+  ambientLight.layers.enable(31);
+  camera.layers.enable(31);
+  raycaster.layers.enable(31); // Ponemos todos los rulers en la misma capa (31) para tenerlos agrupados
+  // Tambien se podran apagar de uno en uno, pero lo que hará será crear y destruir el elemento en scene
+
+  var _iterator9 = _createForOfIteratorHelper(rulers),
+      _step9;
 
   try {
-    for (_iterator7.s(); !(_step7 = _iterator7.n()).done;) {
-      var ruler = _step7.value;
+    for (_iterator9.s(); !(_step9 = _iterator9.n()).done;) {
+      var ruler = _step9.value;
       addGUIRuler(ruler);
       var geometry = generateLine(ruler.points);
+      var hiddenGeometry = generateLine(ruler.points, true); // Hay que recorrer todos los childrens de geometry(porque es un grupo de meshes(cilindros)) para cambiarlos de layer
+
+      var _iterator10 = _createForOfIteratorHelper(geometry.children),
+          _step10;
+
+      try {
+        for (_iterator10.s(); !(_step10 = _iterator10.n()).done;) {
+          var part = _step10.value;
+          part.layers.set(31);
+        }
+      } catch (err) {
+        _iterator10.e(err);
+      } finally {
+        _iterator10.f();
+      }
+
+      var _iterator11 = _createForOfIteratorHelper(hiddenGeometry.children),
+          _step11;
+
+      try {
+        for (_iterator11.s(); !(_step11 = _iterator11.n()).done;) {
+          var _part2 = _step11.value;
+
+          _part2.layers.set(31);
+        }
+      } catch (err) {
+        _iterator11.e(err);
+      } finally {
+        _iterator11.f();
+      }
+
       scene.add(geometry);
-      overscene.add(generateLine(ruler.points, true));
+      overscene.add(hiddenGeometry);
       sceneRulers[ruler._id] = {
         data: ruler,
         geometry: geometry
       };
     }
   } catch (err) {
-    _iterator7.e(err);
+    _iterator9.e(err);
   } finally {
-    _iterator7.f();
+    _iterator9.f();
   }
 }
 
@@ -54369,19 +54444,19 @@ function generatePolygon(vertices) {
   var earcutVertices = [];
   var geometryVertices = [];
 
-  var _iterator8 = _createForOfIteratorHelper(vertices),
-      _step8;
+  var _iterator12 = _createForOfIteratorHelper(vertices),
+      _step12;
 
   try {
-    for (_iterator8.s(); !(_step8 = _iterator8.n()).done;) {
-      var vertice = _step8.value;
+    for (_iterator12.s(); !(_step12 = _iterator12.n()).done;) {
+      var vertice = _step12.value;
       geometryVertices.push(new Vector3(vertice.x, vertice.y, vertice.z));
       earcutVertices = earcutVertices.concat([vertice.x, vertice.y, vertice.z]);
     }
   } catch (err) {
-    _iterator8.e(err);
+    _iterator12.e(err);
   } finally {
-    _iterator8.f();
+    _iterator12.f();
   }
 
   var triangleVertexs = earcut_1(earcutVertices, null, 3); // earcut retorna un array con los indices de los vertices de cada triangulo - [1,0,3, 3,2,1] -
@@ -54406,8 +54481,9 @@ function generatePolygon(vertices) {
 
   return createdPolygon;
 }
-/* Genera una linea a partir de un array de objetos {x:,y:,z:} o de vector3s 
-Se encarga de crear los vector3 necesarios para los vertices en caso de que no */
+/* Genera una linea creada con cilindros a partir de un array de objetos {x:,y:,z:} o de vector3s 
+Hay que crear cilindros en lugar de línias para poder controlar el grosor y la opacidad - https://stackoverflow.com/questions/15316127/three-js-line-vector-to-cylinder
+Se encarga tambien de crear los vector3 necesarios para los vertices en caso de que no se le pase un vector3*/
 
 
 function generateLine(vertices) {
@@ -54415,19 +54491,18 @@ function generateLine(vertices) {
   var vector3_lineVertices = [];
   var prevPoint = null;
 
-  var _iterator9 = _createForOfIteratorHelper(vertices),
-      _step9;
+  var _iterator13 = _createForOfIteratorHelper(vertices),
+      _step13;
 
   try {
-    for (_iterator9.s(); !(_step9 = _iterator9.n()).done;) {
-      var vertice = _step9.value;
+    for (_iterator13.s(); !(_step13 = _iterator13.n()).done;) {
+      var vertice = _step13.value;
       vector3_lineVertices.push(new Vector3(vertice.x, vertice.y, vertice.z));
-    } // Hay que crear cilindros en lugar de línias para poder controlar el grosor y la opacidad https://stackoverflow.com/questions/15316127/three-js-line-vector-to-cylinder
-
+    }
   } catch (err) {
-    _iterator9.e(err);
+    _iterator13.e(err);
   } finally {
-    _iterator9.f();
+    _iterator13.f();
   }
 
   var cylinderMesh = function cylinderMesh(pointX, pointY) {
