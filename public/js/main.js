@@ -134,9 +134,10 @@ const modals = {
     savePolygonModal.addInput({ type: 'text', id: 'polygonName', name: 'polygonName', placeholder: 'Nome', focus: true })
     savePolygonModal.addInput({ type: 'text', id: 'polygonLink', name: 'polygonLink', placeholder: 'link' })
     savePolygonModal.addButton({ text:'Save', color:'green', focus: false, key: 'Enter' }, function(){
+
       polygonModule.savePolygonInfo()
       polygonModule.cleanPolygonCreated()
-      
+
       savePolygonModal.close()
       render()
     })
@@ -155,8 +156,6 @@ const polygonModule = (function(){
   let newPolygons = [] // Para poderlos borrar cuadno se cancela hay que guardar la instancia en algun lado
   let clickingPoints = [] // Para poderlos borrar cuando se cancela hay que guardar la instancia en algun lado
   
-  
-  // !! TODO ESTO Está aquí por comodidad, no sé si deberia pertenecer aquí
   function initPolygonSelection(){
     container.addEventListener('click',selectElement)
   }
@@ -205,10 +204,6 @@ const polygonModule = (function(){
     
     document.querySelector('body').appendChild(freeModal)
   }
-  // !! el TODO ESTO es hasta aquí
-  
-
-
 
 
   function initPolygonCreation(){
@@ -278,7 +273,6 @@ const polygonModule = (function(){
   
   function deletePolygon(polygon){
     
-    // !! Cuidado, se esta borrando el poligono pero no se está quitando de la lista de poligonos del proyecto
     fetch('/api/polygon/delete',{
       method:'POST',
       body: JSON.stringify({ 
@@ -322,6 +316,7 @@ const polygonModule = (function(){
   }
   
   function cleanPolygonCreated(){
+
     for(let polygon of newPolygons) scene.remove(polygon)
     for(let point of clickingPoints) scene.remove(point)
     
@@ -398,7 +393,6 @@ const rulerModule = (function(){
   }
 
   function saveCreatedRuler(event){
-    console.log("Perque no em detecta l'Escape? ", event)
     if(event.key === "Enter"){
       saveRuler()
       stopRulerCreation()
@@ -624,7 +618,7 @@ function render() {
   renderer.clear();  
   composer.render(scene, camera)
 
-  //Intento de hacer otra scene por encima para hacer que las cosas que se esconden detras de objetos siempre esten visibles
+  //Hacer otra scene por encima para hacer que las cosas que se esconden detras de objetos siempre esten visibles
   renderer.clearDepth();
   renderer.render( overscene, camera );
 }
@@ -653,6 +647,13 @@ function init() {
   loadProject();
   polygonModule.initPolygonSelection();
   
+  ambientLight.layers.enable( 31 )
+  camera.layers.enable( 31 )
+  raycaster.layers.enable( 31 )
+  ambientLight.layers.enable( 30 )
+  camera.layers.enable( 30 )
+  raycaster.layers.enable( 30 )
+
   // Renderizar la escena creada
   render();
   
@@ -713,10 +714,6 @@ function loadMeshes(meshes){
 }
 
 function loadPolygons(polygons){
- // Si hay polygons registramos luz, camara y raycaster?? en la capa 30
-  ambientLight.layers.enable( 30 )
-  camera.layers.enable( 30 )
-  raycaster.layers.enable( 30 )
   // Ponemos todos los poligonos en la misma capa(30) para tenerlos agrupados
   // Tambien se podran apagar de uno en uno, pero lo que hará será crear y destruir el elemento en scene
 
@@ -735,10 +732,7 @@ function loadPolygons(polygons){
 }
 
 function loadRulers(rulers){
-  // Si hay rulers registramos luz, camara y raycaster?? en la capa 31
-  ambientLight.layers.enable( 31 )
-  camera.layers.enable( 31 )
-  raycaster.layers.enable( 31 )
+
   // Ponemos todos los rulers en la misma capa (31) para tenerlos agrupados
   // Tambien se podran apagar de uno en uno, pero lo que hará será crear y destruir el elemento en scene
 
