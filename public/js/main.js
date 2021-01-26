@@ -250,13 +250,13 @@ const polygonModule = (function(){
   }
   
   function saveUpdatedPolygon(polygon){
-    let link = document.querySelector('#newLink').value
+    let link = validateLink(document.querySelector('#newLink').value)
     fetch('/api/polygon/update',{
       method:'POST',
       body: JSON.stringify({
         id: polygon._id,
         name: document.querySelector('#newName').value,
-        link: validateLink(link)
+        link
       }),
       headers:{
         'Content-Type': 'application/json'
@@ -271,6 +271,10 @@ const polygonModule = (function(){
       // !! No hay manera logica o facil de actualizar la capa existente ahora mismo. La solucion rapida es borrarla y meter una nueva
       // El problema es que se pone al final siempre claro
       addGUIPolygon(resp)
+      
+      // Cambiar data que tiene linkado el poligono en la mesh
+      scenePolygons[resp._id].data.link = resp.link
+      scenePolygons[resp._id].data.name = resp.name
     })
   }
   
