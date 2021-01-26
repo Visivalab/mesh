@@ -46250,7 +46250,7 @@ var GUI = function () {
     if (text) {
       var groupTitle = document.createElement('div');
       groupTitle.className = 'gui__group__title';
-      groupTitle.textContent = text;
+      groupTitle.innerHTML = "<p>".concat(text, "</p>");
 
       if (dropdownMode) {
         groupTitle.addEventListener('click', function () {
@@ -53774,12 +53774,13 @@ var polygonModule = function () {
   }
 
   function saveUpdatedPolygon(polygon) {
+    var link = document.querySelector('#newLink').value;
     fetch('/api/polygon/update', {
       method: 'POST',
       body: JSON.stringify({
         id: polygon._id,
         name: document.querySelector('#newName').value,
-        link: document.querySelector('#newLink').value
+        link: validateLink(link)
       }),
       headers: {
         'Content-Type': 'application/json'
@@ -53819,13 +53820,15 @@ var polygonModule = function () {
   }
 
   function savePolygonInfo() {
+    // Hay que guardar el link en un formato correcto, osea ponerle https:// si no lo tiene
+    var link = validateLink(document.querySelector('#polygonLink').value);
     fetch('/api/polygon/save', {
       method: 'POST',
       body: JSON.stringify({
         project: pathProjectId,
         points: newPolygonVertices,
         name: document.querySelector('#polygonName').value,
-        link: document.querySelector('#polygonLink').value,
+        link: link,
         color: 'green'
       }),
       headers: {
@@ -54107,6 +54110,11 @@ function createCamera() {
   scene.add(camera);
 }
 
+function toggleLayer(layerId) {
+  camera.layers.toggle(layerId);
+  render();
+}
+
 function enableAllLayers() {
   camera.layers.enableAll();
   render();
@@ -54228,13 +54236,21 @@ function createGui() {
   var layersGroup = GUI.createGroup('layers', 'Layers', true, true);
   var polygonsGroup = GUI.createGroup('polygons', 'Polygons', true, true);
   var rulersGroup = GUI.createGroup('rulers', 'Rulers', true, true);
+  var togglePolygonsButton = GUI.createButton('/public/styles/icons/eye.svg', 'gui__button--extraSize', function () {
+    return toggleLayer(30);
+  });
   var addPolygonsButton = GUI.createButton('/public/styles/icons/plus_cross.svg', 'gui__button--rounded', modals.modalNewPolygon);
+  var toggleRulersButton = GUI.createButton('/public/styles/icons/eye.svg', 'gui__button--extraSize', function () {
+    return toggleLayer(31);
+  });
   var addRulerButton = GUI.createButton('/public/styles/icons/plus_cross.svg', 'gui__button--rounded', rulerModule.initRulerCreation);
   GUI.add(layersGroup, mainGui);
   GUI.add(GUI.createSeparator('space'), mainGui);
+  GUI.add(togglePolygonsButton, polygonsGroup);
   GUI.add(addPolygonsButton, polygonsGroup);
   GUI.add(polygonsGroup, mainGui);
   GUI.add(rulersGroup, mainGui);
+  GUI.add(toggleRulersButton, rulersGroup);
   GUI.add(addRulerButton, rulersGroup);
   GUI.add(GUI.createSeparator('line'), mainGui);
   GUI.add(GUI.createBasic('enableAll', 'Enable all', enableAllLayers), defaultOptions);
@@ -54577,6 +54593,24 @@ var createPoint = function createPoint() {
   });
   var point = new Mesh(ico, material);
   return point;
+};
+
+var validateLink = function validateLink(link) {
+  //!! Seguuuro que hay alguna libreria para hacer esta mierda bien
+  if (/(^https:\/\/)?[-A-Za-z0-9+&@#/%?=~_|!:,.;]+[-A-Za-z0-9+&@#/%=~_|]/.test(link)) {
+    if (/^http/.test(link)) {
+      if (/^https/.test(link)) {
+        return link;
+      } else {
+        return link.replace(/^http/, 'https');
+      }
+    } else {
+      return 'https://' + link;
+    }
+  } else {
+    console.log("Invalid link");
+    return;
+  }
 }; // Abrir cerrar project info
 
 

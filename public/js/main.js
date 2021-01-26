@@ -250,12 +250,13 @@ const polygonModule = (function(){
   }
   
   function saveUpdatedPolygon(polygon){
+    let link = document.querySelector('#newLink').value
     fetch('/api/polygon/update',{
       method:'POST',
       body: JSON.stringify({
         id: polygon._id,
         name: document.querySelector('#newName').value,
-        link: document.querySelector('#newLink').value,
+        link: validateLink(link)
       }),
       headers:{
         'Content-Type': 'application/json'
@@ -297,13 +298,16 @@ const polygonModule = (function(){
   }
   
   function savePolygonInfo(){
+    // Hay que guardar el link en un formato correcto, osea ponerle https:// si no lo tiene
+    let link = validateLink(document.querySelector('#polygonLink').value)
+    
     fetch('/api/polygon/save',{
       method:'POST',
       body: JSON.stringify({
         project: pathProjectId,
         points: newPolygonVertices,
         name: document.querySelector('#polygonName').value,
-        link: document.querySelector('#polygonLink').value,
+        link,
         color: 'green'
       }),
       headers:{
@@ -526,6 +530,11 @@ function createCamera(){
 
 }
 
+function toggleLayer(layerId){
+  camera.layers.toggle( layerId )
+  render()
+}
+
 function enableAllLayers(){
   camera.layers.enableAll()
   render()
@@ -671,14 +680,18 @@ function createGui(){
   let layersGroup = GUI.createGroup('layers','Layers',true,true)
   let polygonsGroup = GUI.createGroup('polygons','Polygons',true,true)
   let rulersGroup = GUI.createGroup('rulers','Rulers',true,true)
+  let togglePolygonsButton = GUI.createButton( '/public/styles/icons/eye.svg','gui__button--extraSize', ()=>toggleLayer(30))
   let addPolygonsButton = GUI.createButton( '/public/styles/icons/plus_cross.svg','gui__button--rounded', modals.modalNewPolygon )
+  let toggleRulersButton = GUI.createButton( '/public/styles/icons/eye.svg','gui__button--extraSize', ()=>toggleLayer(31))
   let addRulerButton = GUI.createButton( '/public/styles/icons/plus_cross.svg','gui__button--rounded', rulerModule.initRulerCreation )
 
   GUI.add( layersGroup, mainGui )
   GUI.add( GUI.createSeparator('space'), mainGui )
+  GUI.add( togglePolygonsButton, polygonsGroup )
   GUI.add( addPolygonsButton, polygonsGroup )
   GUI.add( polygonsGroup, mainGui )
   GUI.add( rulersGroup, mainGui )
+  GUI.add( toggleRulersButton, rulersGroup )
   GUI.add( addRulerButton, rulersGroup )
   
   GUI.add( GUI.createSeparator('line'), mainGui )
@@ -964,6 +977,24 @@ const createPoint = () => {
   const point = new THREE.Mesh( ico, material );
 
   return point
+}
+
+const validateLink = link => {
+  //!! Seguuuro que hay alguna libreria para hacer esta mierda bien
+  if( /(^https:\/\/)?[-A-Za-z0-9+&@#/%?=~_|!:,.;]+[-A-Za-z0-9+&@#/%=~_|]/.test( link ) ) {
+    if( /^http/.test( link ) ) {
+      if(/^https/.test( link )){
+        return link
+      }else{
+        return link.replace(/^http/,'https')
+      }
+    }else{
+      return 'https://' + link
+    }
+  }else{
+    console.log("Invalid link")
+    return
+  }
 }
 
 

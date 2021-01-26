@@ -66,7 +66,7 @@ export const GUI = (function(){
     if(text){
       let groupTitle = document.createElement('div')
       groupTitle.className = 'gui__group__title'
-      groupTitle.textContent = text
+      groupTitle.innerHTML = `<p>${text}</p>`
       
       if(dropdownMode){
         groupTitle.addEventListener('click', () => toggleGroup(group) )

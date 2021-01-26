@@ -61,21 +61,28 @@
 }
 .gui__group__title{
   display: flex;
-  font-weight: 600;
   padding: 10px var(--sides_spacing);
   box-sizing: border-box;
   align-items: center;
   cursor: pointer;
+  justify-content: flex-end;
+}
+.gui__group__title p{
+  font-weight: 600;
+  margin-right: auto;
 }
 .gui__button{
   cursor: pointer;
 }
-.gui__button.gui__button--rounded{
+.gui__group__title .gui__button.gui__button--rounded{
   border-radius: 100%;
   border: 2px solid var(--black)
 }
+.gui__group__title .gui__button.gui__button--extraSize{
+  background-size: 18px;
+}
 .gui__group__title .gui__button{
-  margin-left: auto;
+  margin-left: 10px;
   width: 20px;
   height: 20px;
   background: no-repeat center/10px;
