@@ -713,9 +713,9 @@ function loadProject(){
   .then( project => {
     console.log(`Project: ${project._id}`, project)
 
-    loadMeshes(project.meshes)
     loadPolygons(project.polygons)
     loadRulers(project.rulers)
+    loadMeshes(project.meshes)
   })
 }
 
@@ -748,6 +748,7 @@ function loadPolygons(polygons){
       geometry
     }
   }
+  render()
 }
 
 function loadRulers(rulers){
@@ -772,6 +773,7 @@ function loadRulers(rulers){
       geometry
     }
   }
+  render()
 }
 
 function loadSingleMesh(id,data){

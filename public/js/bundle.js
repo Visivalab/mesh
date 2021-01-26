@@ -54267,9 +54267,9 @@ function loadProject() {
     return response.json();
   }).then(function (project) {
     console.log("Project: ".concat(project._id), project);
-    loadMeshes(project.meshes);
     loadPolygons(project.polygons);
     loadRulers(project.rulers);
+    loadMeshes(project.meshes);
   });
 }
 
@@ -54312,6 +54312,8 @@ function loadPolygons(polygons) {
   } finally {
     _iterator8.f();
   }
+
+  render();
 }
 
 function loadRulers(rulers) {
@@ -54368,6 +54370,8 @@ function loadRulers(rulers) {
   } finally {
     _iterator9.f();
   }
+
+  render();
 }
 
 function loadSingleMesh(id, data) {
