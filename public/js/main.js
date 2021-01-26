@@ -161,6 +161,7 @@ const polygonModule = (function(){
 
   }
   function selectElement(e){
+    unhighlightAll3DObjects()
     for(let freeModal of [...document.querySelectorAll('.freeModal')]) freeModal.remove() // Quita cualquier freeModal que pueda haber por la escena
 
     const intersects = intersections(e.clientX, e.clientY)
@@ -966,6 +967,12 @@ function generateLine(vertices, hiddenGeometry = false){
 /* Resalta el elemento 3D en la escena de three */
 function highlight3DObject(object){
   outlinePass.selectedObjects = [object];
+  render()
+}
+
+/* Quita el resalte a todos los elementos */
+function unhighlightAll3DObjects(){
+  outlinePass.selectedObjects = [];
   render()
 }
 

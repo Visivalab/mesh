@@ -53658,6 +53658,8 @@ var polygonModule = function () {
   }
 
   function selectElement(e) {
+    unhighlightAll3DObjects();
+
     for (var _i = 0, _arr = _toConsumableArray(document.querySelectorAll('.freeModal')); _i < _arr.length; _i++) {
       var freeModal = _arr[_i];
       freeModal.remove();
@@ -54583,6 +54585,13 @@ function generateLine(vertices) {
 
 function highlight3DObject(object) {
   outlinePass.selectedObjects = [object];
+  render();
+}
+/* Quita el resalte a todos los elementos */
+
+
+function unhighlightAll3DObjects() {
+  outlinePass.selectedObjects = [];
   render();
 }
 
