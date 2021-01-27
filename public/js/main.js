@@ -234,7 +234,7 @@ const polygonModule = (function(){
 
 
     if(newPolygonVertices.length >= 3){ 
-      let newPolygon = generatePolygon(newPolygonVertices)
+      let newPolygon = generateBufferPolygon(newPolygonVertices)
       newPolygons.push(newPolygon)   
   
       scene.add( newPolygon )
@@ -739,7 +739,7 @@ function loadPolygons(polygons){
 
   for( let polygon of polygons ){
     addGUIPolygon(polygon)
-    let geometry = generatePolygon(polygon.points)
+    let geometry = generateBufferPolygon(polygon.points)
 
     geometry.layers.set( 30 )
 
@@ -870,26 +870,20 @@ function addGUIRuler(ruler){
 /* Genera un polígono three a partir de un array de objetos de vertices -> [{x:,y:,z:},] 
   No añade el polígono a la escena, solo crea la geometria y la devuelve para ser usada 
   Se usa durante la creación del polígono, pero tambien cuando se cargan todos los polígonos en la escena */
-function generatePolygon(vertices){ 
-  let faces = []
-  let geometry = new THREE.Geometry()
-  let earcutVertices = []
-  let geometryVertices = []
+function generateBufferPolygon(vertices){
+  let positions = []
+  for(let vertice of vertices) positions.push(vertice.x, vertice.y, vertice.z)
   
-  for(let vertice of vertices){
-    geometryVertices.push( new THREE.Vector3(vertice.x, vertice.y, vertice.z) )
-    earcutVertices = earcutVertices.concat( [vertice.x, vertice.y, vertice.z] )
-  }
-  let triangleVertexs = earcut(earcutVertices,null,3) // earcut retorna un array con los indices de los vertices de cada triangulo - [1,0,3, 3,2,1] -
+  const geometry = new THREE.BufferGeometry()
+  /* Geometry ya no funciona porque bufferGeometry dicen que es mas eficiente y blablabla
+  - BufferGeometry funciona con BufferAttributes, estos son los atributos de los vertices puestos en un array tal cual
+  - Solamente hay que pasar a BufferGeometry los BufferAttributes que queramos (position, normals, uvs, color....)
+  */
+  geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(positions), 3 ) ) // El 3 es porque hay 3 componentes para cada vertice en este bufferAttribute (x,y,z). También se convierte a una TypedArray de tipo Float32Array. No sé porqué hace falta ni qué es una typedarray.
 
-  for(let i=0; i<triangleVertexs.length; i+=3){ // Por cada 3 vertices hay crear una cara
-    faces.push( new THREE.Face3( triangleVertexs[i], triangleVertexs[i+1], triangleVertexs[i+2] ) )
-  }
-
-  geometry.vertices = geometryVertices
-  geometry.faces = faces
-  
-  geometry.computeFaceNormals();
+  // setIndex asigna a cada vertice un indice para indicar "los que van juntos". De esta manera hacer caras.
+  geometry.setIndex(earcut(positions,null,3)) // earcut retorna un array con los indices de los vertices de cada triangulo - [1,0,3, 3,2,1] -
+  geometry.computeVertexNormals()
 
   const color = new THREE.Color("rgb(150,50,50)")
   const geometrymaterial = new THREE.MeshStandardMaterial( { 
@@ -903,6 +897,7 @@ function generatePolygon(vertices){
   createdPolygon.sceneType = 'polygon' // Le añadimos esta propiedad para que quede constancia en algun lado de que es un poligono. Nos servirá para cuando se pulse con el ratón para seleccionarlo
   
   return createdPolygon
+
 }
 
 /* Genera una linea creada con cilindros a partir de un array de objetos {x:,y:,z:} o de vector3s 
