@@ -51986,7 +51986,7 @@ var polygonModule = function () {
     });
 
     if (newPolygonVertices.length >= 3) {
-      var newPolygon = generateBufferPolygon(newPolygonVertices);
+      var newPolygon = generatePolygon(newPolygonVertices);
       newPolygons.push(newPolygon);
       scene.add(newPolygon); // !! Ver como No ir poniendo los polígonos uno encima de otro..
     }
@@ -52527,7 +52527,7 @@ function loadPolygons(polygons) {
     for (_iterator8.s(); !(_step8 = _iterator8.n()).done;) {
       var polygon = _step8.value;
       addGUIPolygon(polygon);
-      var geometry = generateBufferPolygon(polygon.points);
+      var geometry = generatePolygon(polygon.points);
       geometry.layers.set(30);
       scene.add(geometry);
       scenePolygons[polygon._id] = {
@@ -52685,10 +52685,10 @@ function addGUIRuler(ruler) {
 
 /* Genera un polígono three a partir de un array de objetos de vertices -> [{x:,y:,z:},] 
   No añade el polígono a la escena, solo crea la geometria y la devuelve para ser usada 
-  Se usa durante la creación del polígono, pero tambien cuando se cargan todos los polígonos en la escena */
+*/
 
 
-function generateBufferPolygon(vertices) {
+function generatePolygon(vertices) {
   var positions = [];
 
   var _iterator12 = _createForOfIteratorHelper(vertices),
@@ -52706,13 +52706,7 @@ function generateBufferPolygon(vertices) {
   }
 
   var geometry = new BufferGeometry();
-  /* Geometry ya no funciona porque bufferGeometry dicen que es mas eficiente y blablabla
-  - BufferGeometry funciona con BufferAttributes, estos son los atributos de los vertices puestos en un array tal cual
-  - Solamente hay que pasar a BufferGeometry los BufferAttributes que queramos (position, normals, uvs, color....)
-  */
-
   geometry.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3)); // El 3 es porque hay 3 componentes para cada vertice en este bufferAttribute (x,y,z). También se convierte a una TypedArray de tipo Float32Array. No sé porqué hace falta ni qué es una typedarray.
-  // setIndex asigna a cada vertice un indice para indicar "los que van juntos". De esta manera hacer caras.
 
   geometry.setIndex(earcut_1(positions, null, 3)); // earcut retorna un array con los indices de los vertices de cada triangulo - [1,0,3, 3,2,1] -
 
