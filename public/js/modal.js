@@ -68,7 +68,7 @@ Modal.prototype.addButton = function(options,callback){
 
   function modalKeydown(e){
     if(options.key === e.key){
-      callback()
+      callback
       document.removeEventListener('keydown', modalKeydown)
     }
   }

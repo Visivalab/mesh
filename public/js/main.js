@@ -36,118 +36,11 @@ let localMeshRoute = false // cambiar localMeshRoute a true para ver meshes de l
 // No estoy muy seguro de la utilidad o practicidad real de esto
 // Además no puedo modificar o cerrar las modales desde otro lado porque no estan definidas fuera de este scope, que tampoco es del todo malo.
 const modals = {
-  'modalNewPolygon': function(){
-    let modalNewPolygon = new Modal({
-      id: 'modalNewPolygon',
-      background: true
-    })
-    modalNewPolygon.mount()
-    modalNewPolygon.write('<strong>Click</strong> to create the polygon.<br>When done, <strong>hit enter</strong>.')
-    modalNewPolygon.addButton({text:'Ok',color:'green',focus:true}, function(){
-      polygonModule.initPolygonCreation()
-      modalNewPolygon.close()
-    })
-    modalNewPolygon.addButton({text:'Cancel',color:'red',focus:false}, function(){
-      modalNewPolygon.close()
-    })
-  },
-  'modalEditPolygon': function(polygon){
-    let editPolyModal = new Modal({
-      background: true,
-      id: 'editPolyModal'
-    })
-    editPolyModal.mount()
-    editPolyModal.addInput({ type:'text',id:'newName',name:'newName',value:polygon.name})
-    editPolyModal.addInput({ type:'text',id:'newLink',name:'newLink',value:polygon.link})
-    editPolyModal.addButton({ text:'Save changes',color:'green',key:'Enter'}, () => {
-      polygonModule.saveUpdatedPolygon(polygon)
-      editPolyModal.close()
-    })
-    editPolyModal.addButton({ text:'Delete',color:'red' }, () => {
-      modals.modalConfirmDeletePolygon(polygon)
-    })
-    editPolyModal.addButton({ text:'Cancel' }, () => {
-      editPolyModal.close()
-    })
-  },
-  'editRulerModal': function(ruler){
-    let editRulerModal = new Modal({
-      background: true,
-      id: 'editRulerModal'
-    })
-    editRulerModal.mount()
-    editRulerModal.addInput({ type:'text',id:'newName',name:'newName',value:ruler.name})
-    editRulerModal.addButton({ text:'Save changes',color:'green',key:'Enter'}, () => {
-      rulerModule.saveUpdatedRuler(ruler)
-      editRulerModal.close()
-    })
-    editRulerModal.addButton({ text:'Delete',color:'red' }, () => {
-      modals.modalConfirmDeleteRuler(ruler)
-    })
-    editRulerModal.addButton({ text:'Cancel' }, () => {
-      editRulerModal.close()
-    })
-  },
-  'modalConfirmDeletePolygon': function(polygon){
-    let confirmDelete = new Modal({
-      id: 'confirmDelete'
-    })
-    confirmDelete.mount()
-    confirmDelete.write('Sure?')
-    confirmDelete.addButton({ text:'Yes',color:'red',key:'Enter' }, () => {
-      polygonModule.deletePolygon(polygon)
-      confirmDelete.close()
-      // !! Esto está así porqué no está referenciada la otra modal en ningun lado que pueda ir desde aquí
-      document.querySelector('#editPolyModal').remove()
-      document.querySelector('.modal__background').remove()
-      
-    })
-    confirmDelete.addButton({ text:'No',color:'green',key:'Escape' }, () => {
-      confirmDelete.close()
-    })
-  },
-  'modalConfirmDeleteRuler': function(ruler){
-    let confirmDelete = new Modal({
-      id: 'confirmDelete'
-    })
-    confirmDelete.mount()
-    confirmDelete.write('Sure?')
-    confirmDelete.addButton({ text:'Yes',color:'red',key:'Enter' }, () => {
-      rulerModule.deleteRuler(ruler)
-      confirmDelete.close()
-      // !! Esto está así porqué no está referenciada la otra modal en ningun lado que pueda ir desde aquí
-      document.querySelector('#editRulerModal').remove()
-      document.querySelector('.modal__background').remove()
-      
-    })
-    confirmDelete.addButton({ text:'No',color:'green',key:'Escape' }, () => {
-      confirmDelete.close()
-    })
-  },
-  'modalSavePolygon': function(){
-    let savePolygonModal = new Modal({
-      id:'savePolygon',
-      background: true
-    })
-    savePolygonModal.mount()
-    savePolygonModal.write('Polígono terminado<br>Puedes ponerle un nombre:')
-    savePolygonModal.addInput({ type: 'text', id: 'polygonName', name: 'polygonName', placeholder: 'Nome', focus: true })
-    savePolygonModal.addInput({ type: 'text', id: 'polygonLink', name: 'polygonLink', placeholder: 'link' })
-    savePolygonModal.addButton({ text:'Save', color:'green', focus: false, key: 'Enter' }, function(){
-
-      polygonModule.savePolygonInfo()
-      polygonModule.cleanPolygonCreated()
-
-      savePolygonModal.close()
-      render()
-    })
-    savePolygonModal.addButton({text:'Cancel',color:'red',focus:false}, function(){
-      polygonModule.cleanPolygonCreated()
-
-      savePolygonModal.close()
-      render()
-    })
-  }
+  
+  
+  
+  
+  
 }
 /* Módulo de CONTROL de CREACIÓN/MODIFICACIÓN/BORRAción.. de los polígonos */
 const polygonModule = (function(){
@@ -211,12 +104,12 @@ const polygonModule = (function(){
 
   function initPolygonCreation(){
     container.addEventListener('click', newPolygonPoint)
-    container.addEventListener('keypress', saveCreatedPolygon)
+    document.querySelector('body').addEventListener('keydown', saveCreatedPolygon)
   }
 
   function stopPolygonCreation(){
     container.removeEventListener('click', newPolygonPoint)
-    container.removeEventListener('keypress', saveCreatedPolygon)
+    document.querySelector('body').removeEventListener('keydown', saveCreatedPolygon)
   }
   
   function newPolygonPoint(event){
@@ -246,7 +139,32 @@ const polygonModule = (function(){
   function saveCreatedPolygon(e){
     if(e.key === "Enter"){
       stopPolygonCreation()
-      modals.modalSavePolygon()
+
+      let savePolygonModal = new Modal({
+        id:'savePolygon',
+        background: true
+      })
+      savePolygonModal.mount()
+      savePolygonModal.write('Polígono terminado<br>Puedes ponerle un nombre:')
+      savePolygonModal.addInput({ type: 'text', id: 'polygonName', name: 'polygonName', placeholder: 'Nome', focus: true })
+      savePolygonModal.addInput({ type: 'text', id: 'polygonLink', name: 'polygonLink', placeholder: 'link' })
+      savePolygonModal.addButton({ text:'Save', color:'green', focus: false, key: 'Enter' }, accept )
+      savePolygonModal.addButton({text:'Cancel',color:'red',focus:false}, cancel )
+
+      function accept(){
+        polygonModule.savePolygonInfo()
+        polygonModule.cleanPolygonCreated()
+  
+        savePolygonModal.close()
+        render()
+      }
+      function cancel(){
+        polygonModule.cleanPolygonCreated()
+  
+        savePolygonModal.close()
+        render()
+      }
+      
     }
   }
   
@@ -386,7 +304,7 @@ const rulerModule = (function(){
     })
 
     container.addEventListener('click', newRulerPoint)
-    container.addEventListener('keypress', saveCreatedRuler)
+    document.querySelector('body').addEventListener('keydown', saveCreatedRuler)
   }
 
   function stopRulerCreation(){
@@ -400,7 +318,7 @@ const rulerModule = (function(){
     render()
 
     container.removeEventListener('click', newRulerPoint)
-    container.removeEventListener('keypress', saveCreatedRuler)
+    document.querySelector('body').removeEventListener('keydown', saveCreatedRuler)
   }
 
   function saveCreatedRuler(event){
@@ -686,7 +604,24 @@ function createGui(){
   let polygonsGroup = GUI.createGroup('polygons','Polygons',true,true)
   let rulersGroup = GUI.createGroup('rulers','Rulers',true,true)
   let togglePolygonsButton = GUI.createButton( '/public/styles/icons/eye.svg','gui__button--extraSize', ()=>toggleLayer(30))
-  let addPolygonsButton = GUI.createButton( '/public/styles/icons/plus_cross.svg','gui__button--rounded', modals.modalNewPolygon )
+  let addPolygonsButton = GUI.createButton( '/public/styles/icons/plus_cross.svg','gui__button--rounded', () => {
+    let modalNewPolygon = new Modal({
+      id: 'modalNewPolygon',
+      background: true
+    })
+    modalNewPolygon.mount()
+    modalNewPolygon.write('<strong>Click</strong> to create the polygon.<br>When done, <strong>hit enter</strong>.')
+    modalNewPolygon.addButton( {text:'Ok',color:'green',focus:true}, accept )
+    modalNewPolygon.addButton( {text:'Cancel',color:'red',focus:false}, cancel )
+
+    function cancel(){
+      modalNewPolygon.close()
+    }
+    function accept(){
+      polygonModule.initPolygonCreation()
+      modalNewPolygon.close()
+    }
+  })
   let toggleRulersButton = GUI.createButton( '/public/styles/icons/eye.svg','gui__button--extraSize', ()=>toggleLayer(31))
   let addRulerButton = GUI.createButton( '/public/styles/icons/plus_cross.svg','gui__button--rounded', rulerModule.initRulerCreation )
 
@@ -823,8 +758,43 @@ function addGUIPolygon(polygon){
       'name': 'Edit',
       'image': '/styles/icons/menu_3puntosVertical.svg',
       'event': function(){
-        console.log("Open element menu")
-        modals.modalEditPolygon(polygon)
+        let editPolyModal = new Modal({
+          background: true,
+          id: 'editPolyModal'
+        })
+        editPolyModal.mount()
+        editPolyModal.addInput({ type:'text',id:'newName',name:'newName',value:polygon.name})
+        editPolyModal.addInput({ type:'text',id:'newLink',name:'newLink',value:polygon.link})
+        editPolyModal.addButton({ text:'Save changes',color:'green',key:'Enter'}, accept )
+        editPolyModal.addButton({ text:'Delete',color:'red' }, delet )
+        editPolyModal.addButton({ text:'Cancel' }, cancel )
+
+        function accept(){
+          polygonModule.saveUpdatedPolygon(polygon)
+          editPolyModal.close()
+        }
+        function delet(){
+          let confirmDelete = new Modal({
+            id: 'confirmDelete'
+          })
+          confirmDelete.mount()
+          confirmDelete.write('Sure?')
+          confirmDelete.addButton({ text:'Yes',color:'red',key:'Enter' }, confirmDelet )
+          confirmDelete.addButton({ text:'No',color:'green',key:'Escape' }, cancel )
+          function confirmDelet(){
+            polygonModule.deletePolygon(polygon)
+            confirmDelete.close()
+            
+            document.querySelector('#editPolyModal').remove()
+            document.querySelector('.modal__background').remove()
+          }
+          function cancel(){
+            confirmDelete.close()
+          }
+        }
+        function cancel(){
+          editPolyModal.close()
+        }
       }
     }
   }
@@ -852,8 +822,46 @@ function addGUIRuler(ruler){
       'name':'Edit',
       'image': '/styles/icons/menu_3puntosVertical.svg',
       'event': function(){
-        console.log("Open element menu")
-        modals.editRulerModal(ruler)
+
+        let editRulerModal = new Modal({
+          background: true,
+          id: 'editRulerModal'
+        })
+        editRulerModal.mount()
+        editRulerModal.addInput({ type:'text',id:'newName',name:'newName',value:ruler.name})
+        editRulerModal.addButton({ text:'Save changes',color:'green',key:'Enter'}, accept )
+        editRulerModal.addButton({ text:'Delete',color:'red' }, delet )
+        editRulerModal.addButton({ text:'Cancel' }, cancel )
+
+        function accept(){
+          rulerModule.saveUpdatedRuler(ruler)
+          editRulerModal.close()
+        }
+        function delet(){
+          
+          let confirmDelete = new Modal({
+            id: 'confirmDelete'
+          })
+          confirmDelete.mount()
+          confirmDelete.write('Sure?')
+          confirmDelete.addButton({ text:'Yes',color:'red',key:'Enter' }, confirmDelet )
+          confirmDelete.addButton({ text:'No',color:'green',key:'Escape' }, cancel )
+
+          function confirmDelet(){
+            rulerModule.deleteRuler(ruler)
+            confirmDelete.close()
+
+            document.querySelector('#editRulerModal').remove()
+            document.querySelector('.modal__background').remove()
+          }
+          function cancel(){
+            confirmDelete.close()
+          }
+        }
+        function cancel(){
+          editRulerModal.close()
+        }
+
       }
     }
   }
