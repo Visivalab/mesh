@@ -17,7 +17,9 @@ export default {
       exclude: [ 'node_modules/**' ],
       babelHelpers: 'bundled' 
     }),
-    analyze(), // Analitza rollup, després al passar el terser redueix molt més el size
+    analyze({
+      summaryOnly:true
+    }), // Analitza rollup, després al passar el terser redueix molt més el size
   
     terser()
   ]

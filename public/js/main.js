@@ -214,8 +214,9 @@ const polygonModule = (function(){
       // !! Se coje tal cual. Molaria hacerlo con una funcion propia del GUI. Habria que pensar el gui como el modal, como un constructor con sus cosas propias
       document.querySelector(`#polygon_${resp._id}`).remove()
 
-      // !! Hay que quitarlo tambien del objeto scenePolygons
       scene.remove(scenePolygons[resp._id].geometry)
+      delete(scenePolygons[resp._id])
+
       render()
     })
   }
@@ -428,7 +429,7 @@ const rulerModule = (function(){
       document.querySelector(`#ruler_${resp._id}`).remove()
 
       // !! Hay que quitarlo tambien del objeto scenePolygons
-      //scene.remove(scenePolygons[resp._id].geometry)
+      //scene.remove(sceneRulers[resp._id].geometry)
       render()
     })
   }
@@ -603,7 +604,10 @@ function createGui(){
   let layersGroup = GUI.createGroup('layers','Layers',true,true)
   let polygonsGroup = GUI.createGroup('polygons','Polygons',true,true)
   let rulersGroup = GUI.createGroup('rulers','Rulers',true,true)
-  let togglePolygonsButton = GUI.createButton( '/public/styles/icons/eye.svg','gui__button--extraSize', ()=>toggleLayer(30))
+  let togglePolygonsButton = GUI.createButton( '/public/styles/icons/eye.svg','gui__button--extraSize', () => {
+    toggleLayer(30)
+    togglePolygonsButton.classList.toggle('off')
+  })
   let addPolygonsButton = GUI.createButton( '/public/styles/icons/plus_cross.svg','gui__button--rounded', () => {
     let modalNewPolygon = new Modal({
       id: 'modalNewPolygon',
@@ -622,7 +626,10 @@ function createGui(){
       modalNewPolygon.close()
     }
   })
-  let toggleRulersButton = GUI.createButton( '/public/styles/icons/eye.svg','gui__button--extraSize', ()=>toggleLayer(31))
+  let toggleRulersButton = GUI.createButton( '/public/styles/icons/eye.svg','gui__button--extraSize', () => {
+    toggleLayer(31)
+    toggleRulersButton.classList.toggle('off')
+  })
   let addRulerButton = GUI.createButton( '/public/styles/icons/plus_cross.svg','gui__button--rounded', rulerModule.initRulerCreation )
 
   GUI.add( layersGroup, mainGui )
@@ -634,9 +641,9 @@ function createGui(){
   GUI.add( toggleRulersButton, rulersGroup )
   GUI.add( addRulerButton, rulersGroup )
   
-  GUI.add( GUI.createSeparator('line'), mainGui )
-  GUI.add( GUI.createBasic('enableAll','Enable all', enableAllLayers), defaultOptions )
-  GUI.add( GUI.createBasic('disableAll','Disable all', disableAllLayers), defaultOptions )
+  //GUI.add( GUI.createSeparator('line'), mainGui )
+  //GUI.add( GUI.createBasic('enableAll','Enable all', enableAllLayers), defaultOptions )
+  //GUI.add( GUI.createBasic('disableAll','Disable all', disableAllLayers), defaultOptions )
   GUI.add( defaultOptions, mainGui )
 
   document.querySelector('body').appendChild( mainGui );
@@ -660,6 +667,7 @@ function loadMeshes(meshes){
 
     let guiLayer = GUI.createBasic(`layer_${i}`, meshes[i].name, function(){
       camera.layers.toggle( i )
+      guiLayer.classList.toggle('off')
       render()
     })
     GUI.add(guiLayer,'#layers .gui__group__content')
@@ -680,6 +688,7 @@ function loadPolygons(polygons){
 
     scene.add( geometry )
     scenePolygons[polygon._id] = {
+      visible: true,
       data: polygon,
       geometry
     }
@@ -705,8 +714,10 @@ function loadRulers(rulers){
     overscene.add(hiddenGeometry)
 
     sceneRulers[ruler._id] = {
+      visible: true,
       data: ruler,
-      geometry
+      geometry,
+      hiddenGeometry,
     }
   }
   render()
@@ -808,12 +819,42 @@ function addGUIPolygon(polygon){
       }
     }
   }
-  let guiElement = GUI.createBasic(`polygon_${polygon._id}`, polygon.name, function(){
-    // No usar capas para esto, solo hay 32 layers como tal en three. Remover y añadir los poligonos tal qual
-    console.log("Apagar este polygon")
-  }, guiElement_options )
+  let guiElement = GUI.createBasic(`polygon_${polygon._id}`, polygon.name, () => togglePolygon(polygon._id), guiElement_options )
+  GUI.add(guiElement,'#polygons .gui__group__content')  
+}
+
+function togglePolygon(elementId){
+  let polygon = scenePolygons[elementId]
+  let GUIPolygon = document.querySelector(`#polygon_${elementId}`)
   
-  GUI.add(guiElement,'#polygons .gui__group__content')
+  if(polygon.visible === true ){
+    scene.remove(polygon.geometry)
+    polygon.visible = false
+    GUIPolygon.classList.add('off')
+  }else{
+    scene.add(polygon.geometry)
+    polygon.visible = true
+    GUIPolygon.classList.remove('off')
+  }
+  render()
+}
+
+function toggleRuler(elementId){
+  let ruler = sceneRulers[elementId]
+  let GUIRuler = document.querySelector(`#ruler_${elementId}`)
+
+  if(ruler.visible === true ){
+    scene.remove(ruler.geometry)
+    overscene.remove(ruler.hiddenGeometry)
+    ruler.visible = false
+    GUIRuler.classList.add('off')
+  }else{
+    scene.add(ruler.geometry)
+    overscene.add(ruler.hiddenGeometry)
+    ruler.visible = true
+    GUIRuler.classList.remove('off')
+  }
+  render()
 }
 
 function addGUIRuler(ruler){
@@ -865,9 +906,7 @@ function addGUIRuler(ruler){
       }
     }
   }
-  let guiElement = GUI.createBasic(`ruler_${ruler._id}`, ruler.name, function(){
-    console.log("Apagar este ruler")
-  }, guiElement_options)
+  let guiElement = GUI.createBasic(`ruler_${ruler._id}`, ruler.name, () => toggleRuler(ruler._id), guiElement_options)
   
   GUI.add(guiElement, '#rulers .gui__group__content')
 }

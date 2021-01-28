@@ -1,3 +1,6 @@
+:root{
+  --off: #cccccc;
+}
 .gui{
   position: fixed;
   width: 200px;
@@ -74,6 +77,9 @@
 .gui__button{
   cursor: pointer;
 }
+.gui__button.off{
+  opacity: 0.2
+}
 .gui__group__title .gui__button.gui__button--rounded{
   border-radius: 100%;
   border: 2px solid var(--black)
@@ -93,6 +99,9 @@
   padding: 10px 10px 10px var(--sides_spacing);
   box-sizing: border-box;
   cursor: pointer;
+}
+.gui__element.off{
+  color: var(--off)
 }
 .gui__element__info{
   margin-left: auto;
