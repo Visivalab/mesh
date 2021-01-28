@@ -52169,9 +52169,8 @@ var rulerModule = function () {
     }).then(function (resp) {
       console.log('Deleted ruler', resp); // !! Se coje tal cual. Molaria hacerlo con una funcion propia del GUI. Habria que pensar el gui como el modal, como un constructor con sus cosas propias
 
-      document.querySelector("#ruler_".concat(resp._id)).remove(); // !! Hay que quitarlo tambien del objeto scenePolygons
-      //scene.remove(sceneRulers[resp._id].geometry)
-
+      document.querySelector("#ruler_".concat(resp._id)).remove();
+      scene.remove(sceneRulers[resp._id].geometry);
       render();
     });
   }
@@ -52885,3 +52884,4 @@ var projectInfo = document.querySelector('#projectInfo');
 projectInfoB.addEventListener('click', function () {
   projectInfo.classList.toggle('hidden');
 });
+//# sourceMappingURL=bundle.js.map

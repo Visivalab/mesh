@@ -6,7 +6,8 @@ export default {
   input: 'public/js/main.js',
   output: {
     file: 'public/js/bundle.js',
-    format: 'cjs'
+    format: 'cjs',
+    sourcemap: true
   },
   plugins: [
     nodeResolve(),

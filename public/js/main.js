@@ -382,7 +382,6 @@ const rulerModule = (function(){
     .then( res => res.json() )
     .then( resp => {
       console.log('Ruler created', resp)
-      
       addGUIRuler(resp)
     })
 
@@ -428,8 +427,7 @@ const rulerModule = (function(){
       // !! Se coje tal cual. Molaria hacerlo con una funcion propia del GUI. Habria que pensar el gui como el modal, como un constructor con sus cosas propias
       document.querySelector(`#ruler_${resp._id}`).remove()
 
-      // !! Hay que quitarlo tambien del objeto scenePolygons
-      //scene.remove(sceneRulers[resp._id].geometry)
+      scene.remove(sceneRulers[resp._id].geometry)
       render()
     })
   }
