@@ -52876,12 +52876,20 @@ var validateLink = function validateLink(link) {
     console.log("Invalid link");
     return;
   }
-}; // Abrir cerrar project info
+}; //** Menú de Info */
+// Abrir cerrar project info
 
 
 var projectInfoB = document.querySelector('#projectInfo--button');
 var projectInfo = document.querySelector('#projectInfo');
 projectInfoB.addEventListener('click', function () {
   projectInfo.classList.toggle('hidden');
+}); // Set change color
+
+var projectColor = document.querySelector('#projectColor');
+projectColor.addEventListener('change', function (e) {
+  console.log(e.target.value);
+  scene.background = new Color(e.target.value);
+  render();
 });
 //# sourceMappingURL=bundle.js.map

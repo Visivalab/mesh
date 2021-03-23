@@ -1044,9 +1044,19 @@ const validateLink = link => {
 }
 
 
+//** Menú de Info */
+
 // Abrir cerrar project info
 let projectInfoB = document.querySelector('#projectInfo--button')
 let projectInfo = document.querySelector('#projectInfo')
 projectInfoB.addEventListener('click',()=>{
   projectInfo.classList.toggle('hidden')
+})
+
+// Set change color
+let projectColor = document.querySelector('#projectColor')
+projectColor.addEventListener('change', e => {
+  console.log(e.target.value)
+  scene.background = new THREE.Color( e.target.value );
+  render()
 })

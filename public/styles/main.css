@@ -1,3 +1,12 @@
+:root{
+  --steam: #bfc1c4;
+  --gray: #dbdbdb4d;
+  --black: #272727;
+
+  --green: #91d197;
+  --red: #f0a1a1;
+}
+
 html,body{
   margin:0;
   font-size:14px;
@@ -8,18 +17,19 @@ html,body{
 p,h1,h2,h3,h4,h5{
   margin: 0;
 }
+input{
+  font-family: 'Raleway';
+  padding: 10px;
+  border-radius: 5px;
+  border: 1px solid var(--steam);
+}
+input[type="color"]{
+  padding: 0;
+  border-radius: 0;
+}
 li{
   list-style: none;
 }
-:root{
-  --steam: #bfc1c4;
-  --gray: #dbdbdb4d;
-  --black: #272727;
-
-  --green: #91d197;
-  --red: #f0a1a1;
-}
-
 button{
   background-color: var(--steam);
   padding: 10px;
@@ -127,7 +137,7 @@ button:focus{
   flex-direction: column;
   background-color: white;
   border-radius: 10px;
-  padding: 15px
+  padding: 15px;
 }
 #projectInfo p{
   margin: 3px 0
