@@ -562,7 +562,7 @@ function init() {
 
   //Crear la escena con su background bien bonito
   scene = new THREE.Scene();
-  scene.background = new THREE.Color( 0xbfe3dd );
+  scene.background = new THREE.Color( 0xfce5cd );
   // Crear la escena de ayuda que irà encima de la scene. Esto es para tener objetos que se esconden detrás de objetos siempre visibles. En overscene se meterian estos objetos que queremos siempre visibles
   overscene = new THREE.Scene();
 
