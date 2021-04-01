@@ -51668,7 +51668,7 @@ OutlinePass.prototype = Object.assign( Object.create( Pass.prototype ), {
 OutlinePass.BlurDirectionX = new Vector2( 1.0, 0.0 );
 OutlinePass.BlurDirectionY = new Vector2( 0.0, 1.0 );
 
-var renderer, scene, overscene, camera, controls, ambientLight;
+var renderer, scene, overscene, camera, controls, ambientLight, hemiLight, dirLight;
 var raycaster = new Raycaster();
 var mouse = new Vector2(); // Variables globales para trabajar con shaders (el outline al pulsar un polígono)
 
@@ -52197,8 +52197,24 @@ function toggleLayer(layerId) {
 }
 
 function createLights() {
-  ambientLight = new AmbientLight(0xffffff, 2);
-  scene.add(ambientLight);
+  ambientLight = new AmbientLight(0xffffff, 2); //scene.add( ambientLight );
+
+  hemiLight = new HemisphereLight(0xffffbb, 0x080820, 0.4);
+  hemiLight.position.set(0, 20, 0);
+  scene.add(hemiLight);
+  dirLight = new DirectionalLight(0xdfebff, 1);
+  dirLight.position.set(50, 200, 100);
+  dirLight.position.multiplyScalar(1.3);
+  dirLight.castShadow = true;
+  dirLight.shadow.mapSize.width = 1024;
+  dirLight.shadow.mapSize.height = 1024;
+  var d = 300;
+  dirLight.shadow.camera.left = -d;
+  dirLight.shadow.camera.right = d;
+  dirLight.shadow.camera.top = d;
+  dirLight.shadow.camera.bottom = -d;
+  dirLight.shadow.camera.far = 1000;
+  scene.add(dirLight);
 }
 
 function setControls() {
