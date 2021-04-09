@@ -1,0 +1,11 @@
+.modal-content{
+  background-color: white;
+}
+
+.project-mesh-list{
+  width: 100%;
+}
+.project__mesh{
+  display: flex;
+  justify-content: space-between;
+}
