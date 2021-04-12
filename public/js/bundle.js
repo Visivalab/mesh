@@ -51668,7 +51668,7 @@ OutlinePass.prototype = Object.assign( Object.create( Pass.prototype ), {
 OutlinePass.BlurDirectionX = new Vector2( 1.0, 0.0 );
 OutlinePass.BlurDirectionY = new Vector2( 0.0, 1.0 );
 
-var renderer, scene, overscene, camera, controls, ambientLight, hemiLight, dirLight;
+var renderer, scene, overscene, camera, controls, hemiLight, dirLight;
 var raycaster = new Raycaster();
 var mouse = new Vector2(); // Variables globales para trabajar con shaders (el outline al pulsar un polígono)
 
@@ -52196,9 +52196,14 @@ function toggleLayer(layerId) {
   render();
 }
 
-function createLights() {
-  ambientLight = new AmbientLight(0xffffff, 2); //scene.add( ambientLight );
+function enableLayers(id) {
+  hemiLight.layers.enable(id);
+  dirLight.layers.enable(id);
+  camera.layers.enable(id);
+  raycaster.layers.enable(id);
+}
 
+function createLights() {
   hemiLight = new HemisphereLight(0xffffbb, 0x080820, 0.4);
   hemiLight.position.set(0, 20, 0);
   scene.add(hemiLight);
@@ -52306,12 +52311,8 @@ function init() {
 
   loadProject();
   polygonModule.initPolygonSelection();
-  ambientLight.layers.enable(31);
-  camera.layers.enable(31);
-  raycaster.layers.enable(31);
-  ambientLight.layers.enable(30);
-  camera.layers.enable(30);
-  raycaster.layers.enable(30); // Renderizar la escena creada
+  enableLayers(30);
+  enableLayers(31); // Renderizar la escena creada
 
   render();
   window.addEventListener('resize', onWindowResize, false);
@@ -52509,9 +52510,7 @@ function loadSingleMesh(id, data) {
     glb.scene.traverse(function (child) {
       child.layers.set(id);
     });
-    ambientLight.layers.enable(id);
-    camera.layers.enable(id);
-    raycaster.layers.enable(id);
+    enableLayers(id);
     render();
     console.groupEnd();
   }, function (xhr) {
@@ -52877,7 +52876,7 @@ var createPoint = function createPoint() {
 };
 
 var validateLink = function validateLink(link) {
-  //!! Seguuuro que hay alguna libreria para hacer esta mierda bien
+  //!! Usar alguna libreria
   if (/(^https:\/\/)?[-A-Za-z0-9+&@#/%?=~_|!:,.;]+[-A-Za-z0-9+&@#/%=~_|]/.test(link)) {
     if (/^http/.test(link)) {
       if (/^https/.test(link)) {

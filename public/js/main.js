@@ -15,7 +15,7 @@ import { GammaCorrectionShader } from 'three/examples/jsm/shaders/GammaCorrectio
 import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
 
 // Variables globales de threejs
-let renderer, scene, overscene, camera, controls, ambientLight, hemiLight, dirLight
+let renderer, scene, overscene, camera, controls, hemiLight, dirLight
 const raycaster = new THREE.Raycaster()
 const mouse = new THREE.Vector2()
 
@@ -457,20 +457,14 @@ function toggleLayer(layerId){
   render()
 }
 
-function enableAllLayers(){
-  camera.layers.enableAll()
-  render()
-}
-
-function disableAllLayers(){
-  camera.layers.disableAll()
-  render()
+function enableLayers(id){
+  hemiLight.layers.enable( id )
+  dirLight.layers.enable( id )
+  camera.layers.enable( id )
+  raycaster.layers.enable( id )
 }
 
 function createLights(){
-
-  ambientLight = new THREE.AmbientLight( 0xffffff, 2 );
-  //scene.add( ambientLight );
 
   hemiLight = new THREE.HemisphereLight( 0xffffbb, 0x080820, 0.4 );
   hemiLight.position.set( 0, 20, 0 );
@@ -603,13 +597,9 @@ function init() {
   loadProject();
   polygonModule.initPolygonSelection();
   
-  ambientLight.layers.enable( 31 )
-  camera.layers.enable( 31 )
-  raycaster.layers.enable( 31 )
-  ambientLight.layers.enable( 30 )
-  camera.layers.enable( 30 )
-  raycaster.layers.enable( 30 )
-
+  enableLayers(30)
+  enableLayers(31)
+  
   // Renderizar la escena creada
   render();
   
@@ -766,11 +756,8 @@ function loadSingleMesh(id,data){
         child.layers.set( id )
       })
 
-      ambientLight.layers.enable( id )
-      camera.layers.enable( id )
-      raycaster.layers.enable( id )
-
-      render();
+      enableLayers(id)
+      render()
       console.groupEnd()
     },
     function(xhr){
@@ -1049,7 +1036,7 @@ const createPoint = () => {
 }
 
 const validateLink = link => {
-  //!! Seguuuro que hay alguna libreria para hacer esta mierda bien
+  //!! Usar alguna libreria
   if( /(^https:\/\/)?[-A-Za-z0-9+&@#/%?=~_|!:,.;]+[-A-Za-z0-9+&@#/%=~_|]/.test( link ) ) {
     if( /^http/.test( link ) ) {
       if(/^https/.test( link )){
