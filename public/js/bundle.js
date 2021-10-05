@@ -53128,7 +53128,8 @@ function init() {
   loadProject();
   polygonModule.initPolygonSelection();
   enableLayers(30);
-  enableLayers(31);
+  enableLayers(31); // modifica temporanea
+
   window.addEventListener('click', function () {
     var intersections = raycaster.intersectObjects(scene.children, true);
 
