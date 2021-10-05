@@ -29,6 +29,7 @@ app.set('view engine', 'pug')
 app.use('/public', express.static('public'))
 app.use('/styles', express.static('public/styles'))
 app.use('/draco', express.static('node_modules/three/examples/js/libs/draco/gltf')) // Los decoders de draco se tienen que cojer directamente del módulo de three 🤷🏻‍♂️
+app.use('/textures', express.static('public/textures/equirectangular/royal_esplanade_2k.hdr'))
 app.use('/bulma', express.static('node_modules/bulma'))
 
 // Definir rutas (Poner en otro lado)

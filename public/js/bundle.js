@@ -216,6 +216,7 @@ const RGBFormat = 1022;
 const RGBAFormat = 1023;
 const LuminanceFormat = 1024;
 const LuminanceAlphaFormat = 1025;
+const RGBEFormat = RGBAFormat;
 const DepthFormat = 1026;
 const DepthStencilFormat = 1027;
 const RedFormat = 1028;
@@ -41901,6 +41902,64 @@ ImmediateRenderObject.prototype.constructor = ImmediateRenderObject;
 
 ImmediateRenderObject.prototype.isImmediateRenderObject = true;
 
+const _floatView = new Float32Array( 1 );
+const _int32View = new Int32Array( _floatView.buffer );
+
+const DataUtils = {
+
+	// Converts float32 to float16 (stored as uint16 value).
+
+	toHalfFloat: function ( val ) {
+
+		// Source: http://gamedev.stackexchange.com/questions/17326/conversion-of-a-number-from-single-precision-floating-point-representation-to-a/17410#17410
+
+		/* This method is faster than the OpenEXR implementation (very often
+		* used, eg. in Ogre), with the additional benefit of rounding, inspired
+		* by James Tursa?s half-precision code. */
+
+		_floatView[ 0 ] = val;
+		const x = _int32View[ 0 ];
+
+		let bits = ( x >> 16 ) & 0x8000; /* Get the sign */
+		let m = ( x >> 12 ) & 0x07ff; /* Keep one extra bit for rounding */
+		const e = ( x >> 23 ) & 0xff; /* Using int is faster here */
+
+		/* If zero, or denormal, or exponent underflows too much for a denormal
+			* half, return signed zero. */
+		if ( e < 103 ) return bits;
+
+		/* If NaN, return NaN. If Inf or exponent overflow, return Inf. */
+		if ( e > 142 ) {
+
+			bits |= 0x7c00;
+			/* If exponent was 0xff and one mantissa bit was set, it means NaN,
+						* not Inf, so make sure we set one mantissa bit too. */
+			bits |= ( ( e == 255 ) ? 0 : 1 ) && ( x & 0x007fffff );
+			return bits;
+
+		}
+
+		/* If exponent underflows but not too much, return a denormal */
+		if ( e < 113 ) {
+
+			m |= 0x0800;
+			/* Extra rounding may overflow and set mantissa to 0 and exponent
+				* to 1, which is OK. */
+			bits |= ( m >> ( 114 - e ) ) + ( ( m >> ( 113 - e ) ) & 1 );
+			return bits;
+
+		}
+
+		bits |= ( ( e - 112 ) << 10 ) | ( m >> 1 );
+		/* Extra rounding. An overflow will set mantissa to 0 and increment
+			* the exponent, which is OK. */
+		bits += m & 1;
+		return bits;
+
+	}
+
+};
+
 const backgroundMaterial = new MeshBasicMaterial( {
 	side: BackSide,
 	depthWrite: false,
@@ -50331,6 +50390,763 @@ DRACOLoader.getDecoderModule = function () {
 
 };
 
+// https://github.com/mrdoob/three.js/issues/5552
+// http://en.wikipedia.org/wiki/RGBE_image_format
+
+var RGBELoader = function ( manager ) {
+
+	DataTextureLoader.call( this, manager );
+
+	this.type = UnsignedByteType;
+
+};
+
+RGBELoader.prototype = Object.assign( Object.create( DataTextureLoader.prototype ), {
+
+	constructor: RGBELoader,
+
+	// adapted from http://www.graphics.cornell.edu/~bjw/rgbe.html
+
+	parse: function ( buffer ) {
+
+		var
+			/* return codes for rgbe routines */
+			//RGBE_RETURN_SUCCESS = 0,
+			RGBE_RETURN_FAILURE = - 1,
+
+			/* default error routine.  change this to change error handling */
+			rgbe_read_error = 1,
+			rgbe_write_error = 2,
+			rgbe_format_error = 3,
+			rgbe_memory_error = 4,
+			rgbe_error = function ( rgbe_error_code, msg ) {
+
+				switch ( rgbe_error_code ) {
+
+					case rgbe_read_error: console.error( 'THREE.RGBELoader Read Error: ' + ( msg || '' ) );
+						break;
+					case rgbe_write_error: console.error( 'THREE.RGBELoader Write Error: ' + ( msg || '' ) );
+						break;
+					case rgbe_format_error: console.error( 'THREE.RGBELoader Bad File Format: ' + ( msg || '' ) );
+						break;
+					default:
+					case rgbe_memory_error: console.error( 'THREE.RGBELoader: Error: ' + ( msg || '' ) );
+
+				}
+
+				return RGBE_RETURN_FAILURE;
+
+			},
+
+			/* offsets to red, green, and blue components in a data (float) pixel */
+			//RGBE_DATA_RED = 0,
+			//RGBE_DATA_GREEN = 1,
+			//RGBE_DATA_BLUE = 2,
+
+			/* number of floats per pixel, use 4 since stored in rgba image format */
+			//RGBE_DATA_SIZE = 4,
+
+			/* flags indicating which fields in an rgbe_header_info are valid */
+			RGBE_VALID_PROGRAMTYPE = 1,
+			RGBE_VALID_FORMAT = 2,
+			RGBE_VALID_DIMENSIONS = 4,
+
+			NEWLINE = '\n',
+
+			fgets = function ( buffer, lineLimit, consume ) {
+
+				lineLimit = ! lineLimit ? 1024 : lineLimit;
+				var p = buffer.pos,
+					i = - 1, len = 0, s = '', chunkSize = 128,
+					chunk = String.fromCharCode.apply( null, new Uint16Array( buffer.subarray( p, p + chunkSize ) ) )
+				;
+				while ( ( 0 > ( i = chunk.indexOf( NEWLINE ) ) ) && ( len < lineLimit ) && ( p < buffer.byteLength ) ) {
+
+					s += chunk; len += chunk.length;
+					p += chunkSize;
+					chunk += String.fromCharCode.apply( null, new Uint16Array( buffer.subarray( p, p + chunkSize ) ) );
+
+				}
+
+				if ( - 1 < i ) {
+
+					/*for (i=l-1; i>=0; i--) {
+						byteCode = m.charCodeAt(i);
+						if (byteCode > 0x7f && byteCode <= 0x7ff) byteLen++;
+						else if (byteCode > 0x7ff && byteCode <= 0xffff) byteLen += 2;
+						if (byteCode >= 0xDC00 && byteCode <= 0xDFFF) i--; //trail surrogate
+					}*/
+					if ( false !== consume ) buffer.pos += len + i + 1;
+					return s + chunk.slice( 0, i );
+
+				}
+
+				return false;
+
+			},
+
+			/* minimal header reading.  modify if you want to parse more information */
+			RGBE_ReadHeader = function ( buffer ) {
+
+				var line, match,
+
+					// regexes to parse header info fields
+					magic_token_re = /^#\?(\S+)/,
+					gamma_re = /^\s*GAMMA\s*=\s*(\d+(\.\d+)?)\s*$/,
+					exposure_re = /^\s*EXPOSURE\s*=\s*(\d+(\.\d+)?)\s*$/,
+					format_re = /^\s*FORMAT=(\S+)\s*$/,
+					dimensions_re = /^\s*\-Y\s+(\d+)\s+\+X\s+(\d+)\s*$/,
+
+					// RGBE format header struct
+					header = {
+
+						valid: 0, /* indicate which fields are valid */
+
+						string: '', /* the actual header string */
+
+						comments: '', /* comments found in header */
+
+						programtype: 'RGBE', /* listed at beginning of file to identify it after "#?". defaults to "RGBE" */
+
+						format: '', /* RGBE format, default 32-bit_rle_rgbe */
+
+						gamma: 1.0, /* image has already been gamma corrected with given gamma. defaults to 1.0 (no correction) */
+
+						exposure: 1.0, /* a value of 1.0 in an image corresponds to <exposure> watts/steradian/m^2. defaults to 1.0 */
+
+						width: 0, height: 0 /* image dimensions, width/height */
+
+					};
+
+				if ( buffer.pos >= buffer.byteLength || ! ( line = fgets( buffer ) ) ) {
+
+					return rgbe_error( rgbe_read_error, 'no header found' );
+
+				}
+
+				/* if you want to require the magic token then uncomment the next line */
+				if ( ! ( match = line.match( magic_token_re ) ) ) {
+
+					return rgbe_error( rgbe_format_error, 'bad initial token' );
+
+				}
+
+				header.valid |= RGBE_VALID_PROGRAMTYPE;
+				header.programtype = match[ 1 ];
+				header.string += line + '\n';
+
+				while ( true ) {
+
+					line = fgets( buffer );
+					if ( false === line ) break;
+					header.string += line + '\n';
+
+					if ( '#' === line.charAt( 0 ) ) {
+
+						header.comments += line + '\n';
+						continue; // comment line
+
+					}
+
+					if ( match = line.match( gamma_re ) ) {
+
+						header.gamma = parseFloat( match[ 1 ], 10 );
+
+					}
+
+					if ( match = line.match( exposure_re ) ) {
+
+						header.exposure = parseFloat( match[ 1 ], 10 );
+
+					}
+
+					if ( match = line.match( format_re ) ) {
+
+						header.valid |= RGBE_VALID_FORMAT;
+						header.format = match[ 1 ];//'32-bit_rle_rgbe';
+
+					}
+
+					if ( match = line.match( dimensions_re ) ) {
+
+						header.valid |= RGBE_VALID_DIMENSIONS;
+						header.height = parseInt( match[ 1 ], 10 );
+						header.width = parseInt( match[ 2 ], 10 );
+
+					}
+
+					if ( ( header.valid & RGBE_VALID_FORMAT ) && ( header.valid & RGBE_VALID_DIMENSIONS ) ) break;
+
+				}
+
+				if ( ! ( header.valid & RGBE_VALID_FORMAT ) ) {
+
+					return rgbe_error( rgbe_format_error, 'missing format specifier' );
+
+				}
+
+				if ( ! ( header.valid & RGBE_VALID_DIMENSIONS ) ) {
+
+					return rgbe_error( rgbe_format_error, 'missing image size specifier' );
+
+				}
+
+				return header;
+
+			},
+
+			RGBE_ReadPixels_RLE = function ( buffer, w, h ) {
+
+				var data_rgba, offset, pos, count, byteValue,
+					scanline_buffer, ptr, ptr_end, i, l, off, isEncodedRun,
+					scanline_width = w, num_scanlines = h, rgbeStart
+				;
+
+				if (
+					// run length encoding is not allowed so read flat
+					( ( scanline_width < 8 ) || ( scanline_width > 0x7fff ) ) ||
+					// this file is not run length encoded
+					( ( 2 !== buffer[ 0 ] ) || ( 2 !== buffer[ 1 ] ) || ( buffer[ 2 ] & 0x80 ) )
+				) {
+
+					// return the flat buffer
+					return new Uint8Array( buffer );
+
+				}
+
+				if ( scanline_width !== ( ( buffer[ 2 ] << 8 ) | buffer[ 3 ] ) ) {
+
+					return rgbe_error( rgbe_format_error, 'wrong scanline width' );
+
+				}
+
+				data_rgba = new Uint8Array( 4 * w * h );
+
+				if ( ! data_rgba.length ) {
+
+					return rgbe_error( rgbe_memory_error, 'unable to allocate buffer space' );
+
+				}
+
+				offset = 0; pos = 0; ptr_end = 4 * scanline_width;
+				rgbeStart = new Uint8Array( 4 );
+				scanline_buffer = new Uint8Array( ptr_end );
+
+				// read in each successive scanline
+				while ( ( num_scanlines > 0 ) && ( pos < buffer.byteLength ) ) {
+
+					if ( pos + 4 > buffer.byteLength ) {
+
+						return rgbe_error( rgbe_read_error );
+
+					}
+
+					rgbeStart[ 0 ] = buffer[ pos ++ ];
+					rgbeStart[ 1 ] = buffer[ pos ++ ];
+					rgbeStart[ 2 ] = buffer[ pos ++ ];
+					rgbeStart[ 3 ] = buffer[ pos ++ ];
+
+					if ( ( 2 != rgbeStart[ 0 ] ) || ( 2 != rgbeStart[ 1 ] ) || ( ( ( rgbeStart[ 2 ] << 8 ) | rgbeStart[ 3 ] ) != scanline_width ) ) {
+
+						return rgbe_error( rgbe_format_error, 'bad rgbe scanline format' );
+
+					}
+
+					// read each of the four channels for the scanline into the buffer
+					// first red, then green, then blue, then exponent
+					ptr = 0;
+					while ( ( ptr < ptr_end ) && ( pos < buffer.byteLength ) ) {
+
+						count = buffer[ pos ++ ];
+						isEncodedRun = count > 128;
+						if ( isEncodedRun ) count -= 128;
+
+						if ( ( 0 === count ) || ( ptr + count > ptr_end ) ) {
+
+							return rgbe_error( rgbe_format_error, 'bad scanline data' );
+
+						}
+
+						if ( isEncodedRun ) {
+
+							// a (encoded) run of the same value
+							byteValue = buffer[ pos ++ ];
+							for ( i = 0; i < count; i ++ ) {
+
+								scanline_buffer[ ptr ++ ] = byteValue;
+
+							}
+							//ptr += count;
+
+						} else {
+
+							// a literal-run
+							scanline_buffer.set( buffer.subarray( pos, pos + count ), ptr );
+							ptr += count; pos += count;
+
+						}
+
+					}
+
+
+					// now convert data from buffer into rgba
+					// first red, then green, then blue, then exponent (alpha)
+					l = scanline_width; //scanline_buffer.byteLength;
+					for ( i = 0; i < l; i ++ ) {
+
+						off = 0;
+						data_rgba[ offset ] = scanline_buffer[ i + off ];
+						off += scanline_width; //1;
+						data_rgba[ offset + 1 ] = scanline_buffer[ i + off ];
+						off += scanline_width; //1;
+						data_rgba[ offset + 2 ] = scanline_buffer[ i + off ];
+						off += scanline_width; //1;
+						data_rgba[ offset + 3 ] = scanline_buffer[ i + off ];
+						offset += 4;
+
+					}
+
+					num_scanlines --;
+
+				}
+
+				return data_rgba;
+
+			};
+
+		var RGBEByteToRGBFloat = function ( sourceArray, sourceOffset, destArray, destOffset ) {
+
+			var e = sourceArray[ sourceOffset + 3 ];
+			var scale = Math.pow( 2.0, e - 128.0 ) / 255.0;
+
+			destArray[ destOffset + 0 ] = sourceArray[ sourceOffset + 0 ] * scale;
+			destArray[ destOffset + 1 ] = sourceArray[ sourceOffset + 1 ] * scale;
+			destArray[ destOffset + 2 ] = sourceArray[ sourceOffset + 2 ] * scale;
+
+		};
+
+		var RGBEByteToRGBHalf = function ( sourceArray, sourceOffset, destArray, destOffset ) {
+
+			var e = sourceArray[ sourceOffset + 3 ];
+			var scale = Math.pow( 2.0, e - 128.0 ) / 255.0;
+
+			destArray[ destOffset + 0 ] = DataUtils.toHalfFloat( sourceArray[ sourceOffset + 0 ] * scale );
+			destArray[ destOffset + 1 ] = DataUtils.toHalfFloat( sourceArray[ sourceOffset + 1 ] * scale );
+			destArray[ destOffset + 2 ] = DataUtils.toHalfFloat( sourceArray[ sourceOffset + 2 ] * scale );
+
+		};
+
+		var byteArray = new Uint8Array( buffer );
+		byteArray.pos = 0;
+		var rgbe_header_info = RGBE_ReadHeader( byteArray );
+
+		if ( RGBE_RETURN_FAILURE !== rgbe_header_info ) {
+
+			var w = rgbe_header_info.width,
+				h = rgbe_header_info.height,
+				image_rgba_data = RGBE_ReadPixels_RLE( byteArray.subarray( byteArray.pos ), w, h );
+
+			if ( RGBE_RETURN_FAILURE !== image_rgba_data ) {
+
+				switch ( this.type ) {
+
+					case UnsignedByteType:
+
+						var data = image_rgba_data;
+						var format = RGBEFormat; // handled as THREE.RGBAFormat in shaders
+						var type = UnsignedByteType;
+						break;
+
+					case FloatType:
+
+						var numElements = ( image_rgba_data.length / 4 ) * 3;
+						var floatArray = new Float32Array( numElements );
+
+						for ( var j = 0; j < numElements; j ++ ) {
+
+							RGBEByteToRGBFloat( image_rgba_data, j * 4, floatArray, j * 3 );
+
+						}
+
+						var data = floatArray;
+						var format = RGBFormat;
+						var type = FloatType;
+						break;
+
+					case HalfFloatType:
+
+						var numElements = ( image_rgba_data.length / 4 ) * 3;
+						var halfArray = new Uint16Array( numElements );
+
+						for ( var j = 0; j < numElements; j ++ ) {
+
+							RGBEByteToRGBHalf( image_rgba_data, j * 4, halfArray, j * 3 );
+
+						}
+
+						var data = halfArray;
+						var format = RGBFormat;
+						var type = HalfFloatType;
+						break;
+
+					default:
+
+						console.error( 'THREE.RGBELoader: unsupported type: ', this.type );
+						break;
+
+				}
+
+				return {
+					width: w, height: h,
+					data: data,
+					header: rgbe_header_info.string,
+					gamma: rgbe_header_info.gamma,
+					exposure: rgbe_header_info.exposure,
+					format: format,
+					type: type
+				};
+
+			}
+
+		}
+
+		return null;
+
+	},
+
+	setDataType: function ( value ) {
+
+		this.type = value;
+		return this;
+
+	},
+
+	load: function ( url, onLoad, onProgress, onError ) {
+
+		function onLoadCallback( texture, texData ) {
+
+			switch ( texture.type ) {
+
+				case UnsignedByteType:
+
+					texture.encoding = RGBEEncoding;
+					texture.minFilter = NearestFilter;
+					texture.magFilter = NearestFilter;
+					texture.generateMipmaps = false;
+					texture.flipY = true;
+					break;
+
+				case FloatType:
+
+					texture.encoding = LinearEncoding;
+					texture.minFilter = LinearFilter;
+					texture.magFilter = LinearFilter;
+					texture.generateMipmaps = false;
+					texture.flipY = true;
+					break;
+
+				case HalfFloatType:
+
+					texture.encoding = LinearEncoding;
+					texture.minFilter = LinearFilter;
+					texture.magFilter = LinearFilter;
+					texture.generateMipmaps = false;
+					texture.flipY = true;
+					break;
+
+			}
+
+			if ( onLoad ) onLoad( texture, texData );
+
+		}
+
+		return DataTextureLoader.prototype.load.call( this, url, onLoadCallback, onProgress, onError );
+
+	}
+
+} );
+
+/**
+ * This class generates custom mipmaps for a roughness map by encoding the lost variation in the
+ * normal map mip levels as increased roughness in the corresponding roughness mip levels. This
+ * helps with rendering accuracy for MeshStandardMaterial, and also helps with anti-aliasing when
+ * using PMREM. If the normal map is larger than the roughness map, the roughness map will be
+ * enlarged to match the dimensions of the normal map.
+ */
+
+var _mipmapMaterial = _getMipmapMaterial();
+
+var _mesh$1 = new Mesh( new PlaneGeometry( 2, 2 ), _mipmapMaterial );
+
+var _flatCamera = new OrthographicCamera( 0, 1, 0, 1, 0, 1 );
+
+var _tempTarget = null;
+
+var _renderer = null;
+
+function RoughnessMipmapper( renderer ) {
+
+	_renderer = renderer;
+
+	_renderer.compile( _mesh$1, _flatCamera );
+
+}
+
+RoughnessMipmapper.prototype = {
+
+	constructor: RoughnessMipmapper,
+
+	generateMipmaps: function ( material ) {
+
+		if ( 'roughnessMap' in material === false ) return;
+
+		var { roughnessMap, normalMap } = material;
+
+		if ( roughnessMap === null || normalMap === null || ! roughnessMap.generateMipmaps || material.userData.roughnessUpdated ) return;
+
+		material.userData.roughnessUpdated = true;
+
+		var width = Math.max( roughnessMap.image.width, normalMap.image.width );
+
+		var height = Math.max( roughnessMap.image.height, normalMap.image.height );
+
+		if ( ! MathUtils.isPowerOfTwo( width ) || ! MathUtils.isPowerOfTwo( height ) ) return;
+
+		var oldTarget = _renderer.getRenderTarget();
+
+		var autoClear = _renderer.autoClear;
+
+		_renderer.autoClear = false;
+
+		if ( _tempTarget === null || _tempTarget.width !== width || _tempTarget.height !== height ) {
+
+			if ( _tempTarget !== null ) _tempTarget.dispose();
+
+			_tempTarget = new WebGLRenderTarget( width, height, { depthBuffer: false } );
+
+			_tempTarget.scissorTest = true;
+
+		}
+
+		if ( width !== roughnessMap.image.width || height !== roughnessMap.image.height ) {
+
+			var params = {
+				wrapS: roughnessMap.wrapS,
+				wrapT: roughnessMap.wrapT,
+				magFilter: roughnessMap.magFilter,
+				minFilter: roughnessMap.minFilter,
+				depthBuffer: false
+			};
+
+			var newRoughnessTarget = new WebGLRenderTarget( width, height, params );
+
+			newRoughnessTarget.texture.generateMipmaps = true;
+
+			// Setting the render target causes the memory to be allocated.
+
+			_renderer.setRenderTarget( newRoughnessTarget );
+
+			material.roughnessMap = newRoughnessTarget.texture;
+
+			if ( material.metalnessMap == roughnessMap ) material.metalnessMap = material.roughnessMap;
+
+			if ( material.aoMap == roughnessMap ) material.aoMap = material.roughnessMap;
+
+		}
+
+		_mipmapMaterial.uniforms.roughnessMap.value = roughnessMap;
+
+		_mipmapMaterial.uniforms.normalMap.value = normalMap;
+
+		var position = new Vector2( 0, 0 );
+
+		var texelSize = _mipmapMaterial.uniforms.texelSize.value;
+
+		for ( var mip = 0; width >= 1 && height >= 1; ++ mip, width /= 2, height /= 2 ) {
+
+			// Rendering to a mip level is not allowed in webGL1. Instead we must set
+			// up a secondary texture to write the result to, then copy it back to the
+			// proper mipmap level.
+
+			texelSize.set( 1.0 / width, 1.0 / height );
+
+			if ( mip == 0 ) texelSize.set( 0.0, 0.0 );
+
+			_tempTarget.viewport.set( position.x, position.y, width, height );
+
+			_tempTarget.scissor.set( position.x, position.y, width, height );
+
+			_renderer.setRenderTarget( _tempTarget );
+
+			_renderer.render( _mesh$1, _flatCamera );
+
+			_renderer.copyFramebufferToTexture( position, material.roughnessMap, mip );
+
+			_mipmapMaterial.uniforms.roughnessMap.value = material.roughnessMap;
+
+		}
+
+		if ( roughnessMap !== material.roughnessMap ) roughnessMap.dispose();
+
+		_renderer.setRenderTarget( oldTarget );
+
+		_renderer.autoClear = autoClear;
+
+	},
+
+	dispose: function () {
+
+		_mipmapMaterial.dispose();
+
+		_mesh$1.geometry.dispose();
+
+		if ( _tempTarget != null ) _tempTarget.dispose();
+
+	}
+
+};
+
+function _getMipmapMaterial() {
+
+	var shaderMaterial = new RawShaderMaterial( {
+
+		uniforms: {
+			roughnessMap: { value: null },
+			normalMap: { value: null },
+			texelSize: { value: new Vector2( 1, 1 ) }
+		},
+
+		vertexShader: /* glsl */`
+			precision mediump float;
+			precision mediump int;
+
+			attribute vec3 position;
+			attribute vec2 uv;
+
+			varying vec2 vUv;
+
+			void main() {
+
+				vUv = uv;
+
+				gl_Position = vec4( position, 1.0 );
+
+			}
+		`,
+
+		fragmentShader: /* glsl */`
+			precision mediump float;
+			precision mediump int;
+
+			varying vec2 vUv;
+
+			uniform sampler2D roughnessMap;
+			uniform sampler2D normalMap;
+			uniform vec2 texelSize;
+
+			#define ENVMAP_TYPE_CUBE_UV
+
+			vec4 envMapTexelToLinear( vec4 a ) { return a; }
+
+			#include <cube_uv_reflection_fragment>
+
+			float roughnessToVariance( float roughness ) {
+
+				float variance = 0.0;
+
+				if ( roughness >= r1 ) {
+
+					variance = ( r0 - roughness ) * ( v1 - v0 ) / ( r0 - r1 ) + v0;
+
+				} else if ( roughness >= r4 ) {
+
+					variance = ( r1 - roughness ) * ( v4 - v1 ) / ( r1 - r4 ) + v1;
+
+				} else if ( roughness >= r5 ) {
+
+					variance = ( r4 - roughness ) * ( v5 - v4 ) / ( r4 - r5 ) + v4;
+
+				} else {
+
+					float roughness2 = roughness * roughness;
+
+					variance = 1.79 * roughness2 * roughness2;
+
+				}
+
+				return variance;
+
+			}
+
+			float varianceToRoughness( float variance ) {
+
+				float roughness = 0.0;
+
+				if ( variance >= v1 ) {
+
+					roughness = ( v0 - variance ) * ( r1 - r0 ) / ( v0 - v1 ) + r0;
+
+				} else if ( variance >= v4 ) {
+
+					roughness = ( v1 - variance ) * ( r4 - r1 ) / ( v1 - v4 ) + r1;
+
+				} else if ( variance >= v5 ) {
+
+					roughness = ( v4 - variance ) * ( r5 - r4 ) / ( v4 - v5 ) + r4;
+
+				} else {
+
+					roughness = pow( 0.559 * variance, 0.25 ); // 0.559 = 1.0 / 1.79
+
+				}
+
+				return roughness;
+
+			}
+
+			void main() {
+
+				gl_FragColor = texture2D( roughnessMap, vUv, - 1.0 );
+
+				if ( texelSize.x == 0.0 ) return;
+
+				float roughness = gl_FragColor.g;
+
+				float variance = roughnessToVariance( roughness );
+
+				vec3 avgNormal;
+
+				for ( float x = - 1.0; x < 2.0; x += 2.0 ) {
+
+					for ( float y = - 1.0; y < 2.0; y += 2.0 ) {
+
+						vec2 uv = vUv + vec2( x, y ) * 0.25 * texelSize;
+
+						avgNormal += normalize( texture2D( normalMap, uv, - 1.0 ).xyz - 0.5 );
+
+					}
+
+				}
+
+				variance += 1.0 - 0.25 * length( avgNormal );
+
+				gl_FragColor.g = varianceToRoughness( variance );
+
+			}
+		`,
+
+		blending: NoBlending,
+		depthTest: false,
+		depthWrite: false
+
+	} );
+
+	shaderMaterial.type = 'RoughnessMipmapper';
+
+	return shaderMaterial;
+
+}
+
 /**
  * Full-screen textured quad shader
  */
@@ -52205,20 +53021,20 @@ function enableLayers(id) {
 
 function createLights() {
   hemiLight = new HemisphereLight(0xffffbb, 0x080820, 0.4);
-  hemiLight.position.set(0, 20, 0);
-  scene.add(hemiLight);
+  hemiLight.position.set(0, 20, 0); //scene.add( hemiLight );
+
   dirLight = new DirectionalLight(0xdfebff, 1);
   dirLight.position.set(50, 200, 100);
   dirLight.position.multiplyScalar(1.3);
   dirLight.castShadow = true;
-  dirLight.shadow.mapSize.width = 1024;
-  dirLight.shadow.mapSize.height = 1024;
-  var d = 300;
+  dirLight.shadow.radius = 8;
+  var d = 50;
+  dirLight.shadow.mapSize.width = 2048;
+  dirLight.shadow.mapSize.height = 2048;
   dirLight.shadow.camera.left = -d;
   dirLight.shadow.camera.right = d;
   dirLight.shadow.camera.top = d;
   dirLight.shadow.camera.bottom = -d;
-  dirLight.shadow.camera.far = 1000;
   scene.add(dirLight);
 }
 
@@ -52236,14 +53052,14 @@ function createRenderer() {
     physicallyCorrectLights: true
   });
   renderer.setPixelRatio(window.devicePixelRatio);
-  renderer.setSize(window.innerWidth, window.innerHeight); //Esto y el antialias le da a saco de calidad al render, pero no sé exactamente como
-  //renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  //renderer.toneMappingExposure = 1;
-  //renderer.gammaOutput = true;
-  //renderer.gammaFactor = 2.2;
-
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = PCFSoftShadowMap;
+  renderer.toneMapping = ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1;
   renderer.outputEncoding = sRGBEncoding;
-  renderer.autoClear = false;
+  renderer.autoClear = false; // Necesario, sino se ve todo negro
+
   container.appendChild(renderer.domElement);
 }
 
@@ -52301,6 +53117,7 @@ function init() {
 
   overscene = new Scene(); // Configuraciones de three
 
+  createEnvironment();
   createCamera();
   createLights();
   createRenderer();
@@ -52316,6 +53133,18 @@ function init() {
 
   render();
   window.addEventListener('resize', onWindowResize, false);
+}
+
+function createEnvironment() {
+  // Pone una textura hdr que ilumina la escena
+  var rgbeLoader = new RGBELoader();
+  rgbeLoader.setDataType(FloatType);
+  rgbeLoader.setPath('/public/textures/equirectangular/');
+  rgbeLoader.load('royal_esplanade_2k.hdr', function (texture) {
+    texture.mapping = EquirectangularReflectionMapping; //scene.background = texture;
+
+    scene.environment = texture;
+  });
 }
 
 function createGui() {
@@ -52492,24 +53321,31 @@ function loadRulers(rulers) {
 }
 
 function loadSingleMesh(id, data) {
-  var api_loader = new GLTFLoader(); // Las meshes estan comprimidas con DRACO para que pesen MUCHISIMO menos, pero se necesita el descodificador draco para cargarlas - https://threejs.org/docs/#examples/en/loaders/GLTFLoader
+  var api_loader = new GLTFLoader();
+  var roughnessMipmapper = new RoughnessMipmapper(renderer); // Las meshes estan comprimidas con DRACO para que pesen MUCHISIMO menos, pero se necesita el descodificador draco para cargarlas - https://threejs.org/docs/#examples/en/loaders/GLTFLoader
 
   var dracoLoader = new DRACOLoader();
   dracoLoader.setDecoderPath('/draco/'); // Para incluir los decoders hay definida una ruta en main.js a su carpeta dentro del module three de node_modules
 
   api_loader.setDRACOLoader(dracoLoader); // Carga elementos de aws que agarra de la base de datos
 
-  api_loader.load( data.url, // cambiar localMeshRoute a true para ver meshes de local en vez de las que vienen de la ruta de aws 
+  api_loader.load( '/public/meshes/TechData.glb' , // cambiar localMeshRoute a true para ver meshes de local en vez de las que vienen de la ruta de aws 
   function (glb) {
     console.group('Loading layer');
     console.log("DB layer info: ", data);
     console.log("Poner en la capa " + id);
-    console.log("glb info: ", glb);
-    scene.add(glb.scene); // Todos los hijos de la escena deben tener el layer, no vale con setear solamente la escena. traverse recorre todos los hijos
+    console.log("glb info: ", glb); // Todos los hijos de la escena deben tener el layer, no vale con setear solamente la escena. traverse recorre todos los hijos
 
     glb.scene.traverse(function (child) {
       child.layers.set(id);
+
+      if (child.isMesh) {
+        child.castShadow = true;
+        child.receiveShadow = true; //roughnessMipmapper.generateMipmaps( child.material );
+      }
     });
+    scene.add(glb.scene);
+    roughnessMipmapper.dispose();
     enableLayers(id);
     render();
     console.groupEnd();

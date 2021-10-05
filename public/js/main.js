@@ -8,6 +8,13 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader';
 
+// Test image based lighting (IBL)
+// Se trata de iluminar una escena a partir de una textura en el entorno, y no a partir de luces.
+// Ejemplo: https://threejs.org/examples/?q=glt#webgl_loader_gltf
+import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
+import { RoughnessMipmapper } from 'three/examples/jsm/utils/RoughnessMipmapper.js';
+
+
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
@@ -29,7 +36,7 @@ let sceneRulers = {}
 //let sceneMeshes = {}
 
 let pathProjectId = document.querySelector('#projectId').textContent
-let localMeshRoute = false // cambiar localMeshRoute a true para ver meshes de local en vez de las que vienen de la ruta de aws 
+let localMeshRoute = true // cambiar localMeshRoute a true para ver meshes de local en vez de las que vienen de la ruta de aws 
 
 
 // Objeto que define la creación de cada modal, para poder encontrarla y editarla facilmente
@@ -468,25 +475,22 @@ function createLights(){
 
   hemiLight = new THREE.HemisphereLight( 0xffffbb, 0x080820, 0.4 );
   hemiLight.position.set( 0, 20, 0 );
-  scene.add( hemiLight );
+  //scene.add( hemiLight );
 
   dirLight = new THREE.DirectionalLight( 0xdfebff, 1 );
   dirLight.position.set( 50, 200, 100 );
   dirLight.position.multiplyScalar( 1.3 );
 
   dirLight.castShadow = true;
-
-  dirLight.shadow.mapSize.width = 1024;
-  dirLight.shadow.mapSize.height = 1024;
-
-  const d = 300;
-
+  dirLight.shadow.radius = 8;
+  
+  const d = 50;
+  dirLight.shadow.mapSize.width = 2048;
+  dirLight.shadow.mapSize.height = 2048;
   dirLight.shadow.camera.left = - d;
   dirLight.shadow.camera.right = d;
   dirLight.shadow.camera.top = d;
   dirLight.shadow.camera.bottom = - d;
-
-  dirLight.shadow.camera.far = 1000;
 
   scene.add( dirLight );
 }
@@ -507,14 +511,13 @@ function createRenderer(){
   });
   renderer.setPixelRatio( window.devicePixelRatio );
   renderer.setSize( window.innerWidth, window.innerHeight );
-
-  //Esto y el antialias le da a saco de calidad al render, pero no sé exactamente como
-  //renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  //renderer.toneMappingExposure = 1;
-  //renderer.gammaOutput = true;
-  //renderer.gammaFactor = 2.2;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1;
   renderer.outputEncoding = THREE.sRGBEncoding;
-  renderer.autoClear = false;
+
+  renderer.autoClear = false; // Necesario, sino se ve todo negro
 
   container.appendChild( renderer.domElement );
 
@@ -584,6 +587,7 @@ function init() {
   overscene = new THREE.Scene();
 
   // Configuraciones de three
+  createEnvironment();
   createCamera();
   createLights();
   createRenderer();
@@ -605,6 +609,18 @@ function init() {
   
 
   window.addEventListener( 'resize', onWindowResize, false );
+}
+
+function createEnvironment(){
+  // Pone una textura hdr que ilumina la escena
+  const rgbeLoader = new RGBELoader();
+  rgbeLoader.setDataType(THREE.FloatType);
+  rgbeLoader.setPath('/public/textures/equirectangular/');
+  rgbeLoader.load('royal_esplanade_2k.hdr', function(texture){
+    texture.mapping = THREE.EquirectangularReflectionMapping;
+    //scene.background = texture;
+    scene.environment = texture;
+  })
 }
 
 function createGui(){
@@ -736,25 +752,33 @@ function loadRulers(rulers){
 
 function loadSingleMesh(id,data){
   const api_loader = new GLTFLoader();
-  
+
+  const roughnessMipmapper = new RoughnessMipmapper( renderer );
+
   // Las meshes estan comprimidas con DRACO para que pesen MUCHISIMO menos, pero se necesita el descodificador draco para cargarlas - https://threejs.org/docs/#examples/en/loaders/GLTFLoader
   const dracoLoader = new DRACOLoader();
   dracoLoader.setDecoderPath('/draco/'); // Para incluir los decoders hay definida una ruta en main.js a su carpeta dentro del module three de node_modules
   api_loader.setDRACOLoader(dracoLoader); // Carga elementos de aws que agarra de la base de datos
 
-  api_loader.load( localMeshRoute ? '/public/meshes/cube10x10.glb' : data.url, // cambiar localMeshRoute a true para ver meshes de local en vez de las que vienen de la ruta de aws 
+  api_loader.load( localMeshRoute ? '/public/meshes/TechData.glb' : data.url, // cambiar localMeshRoute a true para ver meshes de local en vez de las que vienen de la ruta de aws 
     function(glb){
       console.group('Loading layer')
       console.log("DB layer info: ", data)
       console.log("Poner en la capa "+id)
       console.log("glb info: ", glb)
 
-      scene.add(glb.scene)
-
       // Todos los hijos de la escena deben tener el layer, no vale con setear solamente la escena. traverse recorre todos los hijos
       glb.scene.traverse( function(child) {
         child.layers.set( id )
+        if(child.isMesh){
+          child.castShadow = true;
+          child.receiveShadow = true;
+          //roughnessMipmapper.generateMipmaps( child.material );
+        }
       })
+
+      scene.add(glb.scene)
+      roughnessMipmapper.dispose()
 
       enableLayers(id)
       render()
