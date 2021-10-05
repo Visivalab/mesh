@@ -1,3 +1,4 @@
 node_modules
-meshes/*
+public/meshes/*
+public/textures/*
 .env
