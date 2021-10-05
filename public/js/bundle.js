@@ -53128,7 +53128,14 @@ function init() {
   loadProject();
   polygonModule.initPolygonSelection();
   enableLayers(30);
-  enableLayers(31); // Renderizar la escena creada
+  enableLayers(31);
+  window.addEventListener('click', function () {
+    var intersections = raycaster.intersectObjects(scene.children, true);
+
+    if (intersections.length > 0) {
+      console.log(intersections[0].point);
+    }
+  }); // Renderizar la escena creada
 
   render();
   window.addEventListener('resize', onWindowResize, false);
