@@ -53329,7 +53329,7 @@ function loadSingleMesh(id, data) {
 
   api_loader.setDRACOLoader(dracoLoader); // Carga elementos de aws que agarra de la base de datos
 
-  api_loader.load( '/public/meshes/TechData.glb' , // cambiar localMeshRoute a true para ver meshes de local en vez de las que vienen de la ruta de aws 
+  api_loader.load( data.url, // cambiar localMeshRoute a true para ver meshes de local en vez de las que vienen de la ruta de aws 
   function (glb) {
     console.group('Loading layer');
     console.log("DB layer info: ", data);

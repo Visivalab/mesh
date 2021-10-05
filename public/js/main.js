@@ -36,7 +36,7 @@ let sceneRulers = {}
 //let sceneMeshes = {}
 
 let pathProjectId = document.querySelector('#projectId').textContent
-let localMeshRoute = true // cambiar localMeshRoute a true para ver meshes de local en vez de las que vienen de la ruta de aws 
+let localMeshRoute = false // cambiar localMeshRoute a true para ver meshes de local en vez de las que vienen de la ruta de aws 
 
 
 // Objeto que define la creación de cada modal, para poder encontrarla y editarla facilmente
