@@ -52484,7 +52484,7 @@ OutlinePass.prototype = Object.assign( Object.create( Pass.prototype ), {
 OutlinePass.BlurDirectionX = new Vector2( 1.0, 0.0 );
 OutlinePass.BlurDirectionY = new Vector2( 0.0, 1.0 );
 
-var renderer, scene, overscene, camera, controls, hemiLight, dirLight;
+var renderer, scene, overscene, camera, controls, ambientLight, dirLight;
 var raycaster = new Raycaster();
 var mouse = new Vector2(); // Variables globales para trabajar con shaders (el outline al pulsar un polígono)
 
@@ -53013,16 +53013,15 @@ function toggleLayer(layerId) {
 }
 
 function enableLayers(id) {
-  hemiLight.layers.enable(id);
+  ambientLight.layers.enable(id);
   dirLight.layers.enable(id);
   camera.layers.enable(id);
   raycaster.layers.enable(id);
 }
 
 function createLights() {
-  hemiLight = new HemisphereLight(0xffffbb, 0x080820, 0.4);
-  hemiLight.position.set(0, 20, 0); //scene.add( hemiLight );
-
+  ambientLight = new AmbientLight(0xffffbb, 0.2);
+  scene.add(ambientLight);
   dirLight = new DirectionalLight(0xdfebff, 1);
   dirLight.position.set(50, 200, 100);
   dirLight.position.multiplyScalar(1.3);
@@ -53340,6 +53339,7 @@ function loadSingleMesh(id, data) {
       child.layers.set(id);
 
       if (child.isMesh) {
+        child.material.metalness = 0;
         child.castShadow = true;
         child.receiveShadow = true; //roughnessMipmapper.generateMipmaps( child.material );
       }

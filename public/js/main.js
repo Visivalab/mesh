@@ -22,7 +22,7 @@ import { GammaCorrectionShader } from 'three/examples/jsm/shaders/GammaCorrectio
 import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
 
 // Variables globales de threejs
-let renderer, scene, overscene, camera, controls, hemiLight, dirLight
+let renderer, scene, overscene, camera, controls, ambientLight, dirLight
 const raycaster = new THREE.Raycaster()
 const mouse = new THREE.Vector2()
 
@@ -465,17 +465,15 @@ function toggleLayer(layerId){
 }
 
 function enableLayers(id){
-  hemiLight.layers.enable( id )
+  ambientLight.layers.enable( id )
   dirLight.layers.enable( id )
   camera.layers.enable( id )
   raycaster.layers.enable( id )
 }
 
 function createLights(){
-
-  hemiLight = new THREE.HemisphereLight( 0xffffbb, 0x080820, 0.4 );
-  hemiLight.position.set( 0, 20, 0 );
-  //scene.add( hemiLight );
+  ambientLight = new THREE.AmbientLight( 0xffffbb, 0.2 );
+  scene.add( ambientLight );
 
   dirLight = new THREE.DirectionalLight( 0xdfebff, 1 );
   dirLight.position.set( 50, 200, 100 );
@@ -761,16 +759,17 @@ function loadSingleMesh(id,data){
   api_loader.setDRACOLoader(dracoLoader); // Carga elementos de aws que agarra de la base de datos
 
   api_loader.load( localMeshRoute ? '/public/meshes/TechData.glb' : data.url, // cambiar localMeshRoute a true para ver meshes de local en vez de las que vienen de la ruta de aws 
-    function(glb){
+  function(glb){
       console.group('Loading layer')
       console.log("DB layer info: ", data)
       console.log("Poner en la capa "+id)
       console.log("glb info: ", glb)
-
+      
       // Todos los hijos de la escena deben tener el layer, no vale con setear solamente la escena. traverse recorre todos los hijos
       glb.scene.traverse( function(child) {
         child.layers.set( id )
         if(child.isMesh){
+          child.material.metalness = 0;
           child.castShadow = true;
           child.receiveShadow = true;
           //roughnessMipmapper.generateMipmaps( child.material );
