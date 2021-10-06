@@ -22,7 +22,7 @@ import { GammaCorrectionShader } from 'three/examples/jsm/shaders/GammaCorrectio
 import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
 
 // Variables globales de threejs
-let renderer, scene, overscene, camera, controls, ambientLight, dirLight
+let renderer, scene, overscene, camera, controls/*, ambientLight*/, dirLight
 const raycaster = new THREE.Raycaster()
 const mouse = new THREE.Vector2()
 
@@ -465,15 +465,15 @@ function toggleLayer(layerId){
 }
 
 function enableLayers(id){
-  ambientLight.layers.enable( id )
+  //ambientLight.layers.enable( id )
   dirLight.layers.enable( id )
   camera.layers.enable( id )
   raycaster.layers.enable( id )
 }
 
 function createLights(){
-  ambientLight = new THREE.AmbientLight( 0xffffbb, 0.2 );
-  scene.add( ambientLight );
+  //ambientLight = new THREE.AmbientLight( 0xffffbb, 0.2 );
+  //scene.add( ambientLight );
 
   dirLight = new THREE.DirectionalLight( 0xdfebff, 1 );
   dirLight.position.set( 50, 200, 100 );
@@ -620,14 +620,16 @@ function init() {
 }
 
 function createEnvironment(){
-  // Pone una textura hdr que ilumina la escena
   const rgbeLoader = new RGBELoader();
   rgbeLoader.setDataType(THREE.FloatType);
-  rgbeLoader.setPath('/public/textures/equirectangular/');
-  rgbeLoader.load('royal_esplanade_2k.hdr', function(texture){
-    texture.mapping = THREE.EquirectangularReflectionMapping;
-    //scene.background = texture;
-    scene.environment = texture;
+  rgbeLoader.setPath('/public/textures/');
+  rgbeLoader.load('christmas_photo_studio_04_1k.hdr', function(texture){
+    let pmremGenerator = new THREE.PMREMGenerator(renderer);
+    pmremGenerator.compileEquirectangularShader();
+    let envMap = pmremGenerator.fromEquirectangular(texture).texture;
+    pmremGenerator.dispose();
+
+    scene.environment = envMap;
   })
 }
 
