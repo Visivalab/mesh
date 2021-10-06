@@ -507,7 +507,7 @@ function createRenderer(){
     
   renderer = new THREE.WebGLRenderer({ 
     antialias: true,
-    physicallyCorrectLights: true 
+    physicallyCorrectLights: true
   });
   renderer.setPixelRatio( window.devicePixelRatio );
   renderer.setSize( window.innerWidth, window.innerHeight );
