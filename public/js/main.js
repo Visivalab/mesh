@@ -489,7 +489,7 @@ function createLights(){
   dirLight.shadow.camera.right = d;
   dirLight.shadow.camera.top = d;
   dirLight.shadow.camera.bottom = - d;
-  dirLight.shadow.bias = -0.0001;
+  dirLight.shadow.bias = -0.01;
   
 
   scene.add( dirLight );
