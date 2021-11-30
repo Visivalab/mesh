@@ -22,7 +22,7 @@ import { GammaCorrectionShader } from 'three/examples/jsm/shaders/GammaCorrectio
 import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
 
 // Variables globales de threejs
-let renderer, scene, overscene, camera, controls/*, ambientLight*/, dirLight
+let renderer, scene, overscene, camera, controls, ambientLight, dirLight
 const raycaster = new THREE.Raycaster()
 const mouse = new THREE.Vector2()
 
@@ -465,17 +465,17 @@ function toggleLayer(layerId){
 }
 
 function enableLayers(id){
-  //ambientLight.layers.enable( id )
+  ambientLight.layers.enable( id )
   dirLight.layers.enable( id )
   camera.layers.enable( id )
   raycaster.layers.enable( id )
 }
 
 function createLights(){
-  //ambientLight = new THREE.AmbientLight( 0xffffbb, 0.2 );
-  //scene.add( ambientLight );
+  ambientLight = new THREE.AmbientLight( 0xffffff, 0.1 );
+  scene.add( ambientLight );
 
-  dirLight = new THREE.DirectionalLight( 0xdfebff, 1 );
+  dirLight = new THREE.DirectionalLight( 0xdfebff, 0.1 );
   dirLight.position.set( 50, 200, 100 );
   dirLight.position.multiplyScalar( 1.3 );
 
