@@ -8,7 +8,7 @@
     "prod": "nodemon app.js",
     "build": "rollup --config rollupBuild.config.js",
     "start": "node app.js",
-    "launch": "pm2 start npm --name mesh -- run start",
+    "launch": "pm2 start npm --name mesh -- run start --watch",
     "stop": "pm2 stop mesh"
   },
   "author": "",
