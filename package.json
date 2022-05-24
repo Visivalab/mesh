@@ -9,7 +9,7 @@
     "build": "rollup --config rollupBuild.config.js",
     "start": "node app.js",
     "launch": "pm2 start npm --name mesh -- run start",
-    "stop": "pm2 stop ehem"
+    "stop": "pm2 stop mesh"
   },
   "author": "",
   "license": "ISC",
