@@ -4,10 +4,12 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "rollup": "rollup --config rollup.config.js --watch",
-    "build": "rollup --config rollupBuild.config.js",
+    "dev": "rollup --config rollup.config.js --watch",
     "prod": "nodemon app.js",
-    "start": "node app.js"
+    "build": "rollup --config rollupBuild.config.js",
+    "start": "node app.js",
+    "launch": "pm2 start npm --name mesh -- run start --watch",
+    "stop": "pm2 stop mesh"
   },
   "author": "",
   "license": "ISC",

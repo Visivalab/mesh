@@ -6,7 +6,7 @@ const mongoose = require('mongoose') // https://mongoosejs.com/docs/guide.html
 const cors = require('cors')
 
 const app = express()
-const port = 3000
+const port = 4004
 
 // Conexión a la base de datos (mongodb 🤼‍♂️)
 mongoose.connect(process.env.MONGODB, {
